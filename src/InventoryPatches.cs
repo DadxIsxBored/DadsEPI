@@ -8,24 +8,34 @@ namespace DadsEPI
     {
         private static void Prefix(Player __instance)
         {
-            if (DadsEPIPlugin.ModEnabled?.Value == true)
-            {
-                __instance.GetInventory()?.SetHeight(InventoryLayout.TotalRows);
-            }
+            if (DadsEPIPlugin.ModEnabled?.Value != true) return;
+            Inventory inventory = __instance.GetInventory();
+            inventory?.SetHeight(Math.Max(inventory.GetHeight(), InventoryLayout.TotalRows(inventory.GetWidth())));
         }
 
-        private static void Postfix(Player __instance)
-        {
-            InventoryLayout.Apply(__instance, normalizeItems: true);
-        }
+        private static void Postfix(Player __instance) => InventoryLayout.Apply(__instance, true);
     }
 
-    [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
+    [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned), new[] { typeof(bool) })]
     internal static class PlayerSpawnedPatch
     {
-        private static void Postfix(Player __instance)
+        private static void Postfix(Player __instance) => InventoryLayout.Apply(__instance, true);
+    }
+
+    [HarmonyPatch(typeof(Player), nameof(Player.SetInventorySize))]
+    internal static class NativeInventorySizePatch
+    {
+        private static bool Prefix(Player __instance, int rows)
         {
-            InventoryLayout.Apply(__instance, normalizeItems: true);
+            if (DadsEPIPlugin.ModEnabled?.Value != true) return true;
+            rows = UnityEngine.Mathf.Clamp(rows, InventoryLayout.BaseVanillaRows, InventoryLayout.MaximumVanillaRows);
+            InventoryLayout.SetVanillaRows(rows);
+            __instance.AddUniqueKeyValue(Player.InventoryRowsKey, rows.ToString());
+            Inventory inventory = __instance.GetInventory();
+            inventory.SetHeight(InventoryLayout.TotalRows(inventory.GetWidth()));
+            InventoryLayout.Apply(__instance, true);
+            __instance.DropInvalidItems();
+            return false;
         }
     }
 
@@ -34,11 +44,7 @@ namespace DadsEPI
     {
         private static bool Prefix(Inventory __instance, bool __0, ref Vector2i __result)
         {
-            if (DadsEPIPlugin.ModEnabled?.Value != true || !InventoryLayout.IsPlayerInventory(__instance))
-            {
-                return true;
-            }
-
+            if (DadsEPIPlugin.ModEnabled?.Value != true || !InventoryLayout.IsPlayerInventory(__instance)) return true;
             __result = InventoryLayout.FindGeneralEmpty(__instance, __0);
             return false;
         }
@@ -50,9 +56,7 @@ namespace DadsEPI
         private static void Postfix(Inventory __instance, ref int __result)
         {
             if (DadsEPIPlugin.ModEnabled?.Value == true && InventoryLayout.IsPlayerInventory(__instance))
-            {
                 __result = InventoryLayout.CountGeneralEmpty(__instance);
-            }
         }
     }
 
@@ -62,48 +66,37 @@ namespace DadsEPI
         private static void Postfix(Inventory __instance, ref bool __result)
         {
             if (DadsEPIPlugin.ModEnabled?.Value == true && InventoryLayout.IsPlayerInventory(__instance))
-            {
                 __result = InventoryLayout.CountGeneralEmpty(__instance) > 0;
-            }
         }
     }
 
-    [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.DropItem))]
+    [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.DropItem), new[] { typeof(Inventory), typeof(ItemDrop.ItemData), typeof(int), typeof(Vector2i) })]
     internal static class InventoryGridDropPatch
     {
         private static bool Prefix(InventoryGrid __instance, ItemDrop.ItemData item, Vector2i pos, ref bool __result)
         {
-            if (DadsEPIPlugin.ModEnabled?.Value != true || !InventoryLayout.IsPlayerInventory(__instance.GetInventory()))
+            Inventory inventory = __instance.GetInventory();
+            if (DadsEPIPlugin.ModEnabled?.Value != true || !InventoryLayout.IsPlayerInventory(inventory)) return true;
+            if (!InventoryLayout.CanPlace(item, pos, inventory.GetWidth()))
             {
-                return true;
-            }
-
-            if (!InventoryLayout.CanPlace(item, pos))
-            {
-                Player.m_localPlayer?.Message(MessageHud.MessageType.Center, "DadsEPI: that item cannot use this reserved slot.");
+                Player.m_localPlayer?.Message(MessageHud.MessageType.Center, "This item does not match that dedicated slot.");
                 __result = false;
                 return false;
             }
-
-            if (item != null && item.m_equipped && item.m_gridPos.y == InventoryLayout.EquipmentRow && pos.y != InventoryLayout.EquipmentRow)
-            {
-                Player.m_localPlayer?.UnequipItem(item);
-            }
-
+            int oldSlot = InventoryLayout.SlotIndex(item?.m_gridPos ?? new Vector2i(-1, -1), inventory.GetWidth());
+            int newSlot = InventoryLayout.SlotIndex(pos, inventory.GetWidth());
+            if (item != null && item.m_equipped && oldSlot >= 0 && newSlot < 0) Player.m_localPlayer?.UnequipItem(item);
             return true;
         }
 
         private static void Postfix(InventoryGrid __instance, ItemDrop.ItemData item, Vector2i pos, bool __result)
         {
-            if (!__result || item == null || Player.m_localPlayer == null || !InventoryLayout.IsPlayerInventory(__instance.GetInventory()))
-            {
-                return;
-            }
-
-            if (pos.y == InventoryLayout.EquipmentRow && InventoryLayout.EquipmentColumn(item.m_shared.m_itemType) == pos.x)
-            {
+            if (!__result || item == null || Player.m_localPlayer == null) return;
+            Inventory inventory = __instance.GetInventory();
+            if (!InventoryLayout.IsPlayerInventory(inventory)) return;
+            int slot = InventoryLayout.SlotIndex(pos, inventory.GetWidth());
+            if (slot >= 0 && slot < InventoryLayout.EquipmentSlotCount && DadsEPIPlugin.AutoEquip.Value)
                 Player.m_localPlayer.EquipItem(item);
-            }
         }
     }
 
@@ -113,9 +106,7 @@ namespace DadsEPI
         private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, bool __result)
         {
             if (__result && DadsEPIPlugin.ModEnabled?.Value == true && __instance is Player player && player == Player.m_localPlayer)
-            {
-                InventoryLayout.MoveEquippedItemToReservedSlot(player, item);
-            }
+                InventoryLayout.MoveEquippedItemToDedicatedSlot(player, item);
         }
     }
 
@@ -125,10 +116,19 @@ namespace DadsEPI
         private static void Postfix(InventoryGrid __instance)
         {
             if (DadsEPIPlugin.ModEnabled?.Value == true && InventoryLayout.IsPlayerInventory(__instance.GetInventory()))
-            {
                 SlotVisuals.Refresh(__instance);
-            }
         }
     }
-}
 
+    [HarmonyPatch(typeof(Hud), "Update")]
+    internal static class HudUpdatePatch
+    {
+        private static void Postfix(Hud __instance) => QuickSlotHud.Refresh(__instance);
+    }
+
+    [HarmonyPatch(typeof(Hud), "OnDestroy")]
+    internal static class HudDestroyPatch
+    {
+        private static void Prefix() => QuickSlotHud.Reset();
+    }
+}

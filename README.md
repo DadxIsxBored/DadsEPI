@@ -5,8 +5,10 @@ DadsEPI is a clean-room extended inventory implementation for Valheim. It is bui
 ## Design
 
 - The character's normal `Inventory` remains the source of truth.
-- Valheim's native variable-height inventory support provides additional rows.
-- Reserved equipment and quick slots remain part of the normal serialized inventory.
+- The ordinary grid defaults to Valheim's current native row count; `Extra Inventory Rows` defaults to zero.
+- Labeled equipment and quick slots render in a separate panel by default while remaining safely serialized in the player inventory.
+- Equipment includes Head, Chest, Legs, Back, Utility, Trinket, Wishbone, Demister, and configurable custom slots.
+- Quick slots support zero through eight entries, individual hotkeys, HUD labels, HUD scaling, row layout, and drag positioning.
 - Automatic item placement uses general slots only.
 - Equipment placement is type checked.
 - Quick-slot input is isolated from movement controls and blocked while text, menu, map, console, or inventory input is active.
@@ -32,4 +34,3 @@ The project currently references the installed Valheim 1.0.12 managed assemblies
 Do not load DadsEPI alongside another mod that owns extended player inventory rows or equipment slots.
 
 See [THUNDERSTORE.md](THUNDERSTORE.md) for packaging and upload steps.
-

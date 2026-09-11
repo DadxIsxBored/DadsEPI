@@ -7,108 +7,135 @@ namespace DadsEPI
 {
     internal static class SlotVisuals
     {
+        private const string PanelName = "DadsEPI_EquipmentPanel";
         private const string LabelName = "DadsEPI_SlotLabel";
-        private static readonly Dictionary<int, ColorBlock> OriginalColors = new Dictionary<int, ColorBlock>();
-        private static readonly Color EquipmentColor = new Color(0.48f, 0.30f, 0.12f, 0.92f);
-        private static readonly Color QuickColor = new Color(0.10f, 0.32f, 0.48f, 0.92f);
-        private static readonly Color DisabledColor = new Color(0.12f, 0.12f, 0.12f, 0.80f);
+        private static readonly Dictionary<int, Transform> OriginalParents = new Dictionary<int, Transform>();
+        private static RectTransform _panel;
+
+        internal static void Reset()
+        {
+            if (_panel != null)
+            {
+                foreach (InventoryElement element in _panel.GetComponentsInChildren<InventoryElement>(true))
+                {
+                    if (OriginalParents.TryGetValue(element.GetInstanceID(), out Transform original) && original != null)
+                        element.transform.SetParent(original, false);
+                }
+                Object.Destroy(_panel.gameObject);
+            }
+            _panel = null;
+            OriginalParents.Clear();
+        }
 
         internal static void Refresh(InventoryGrid grid)
         {
-            InventoryElement[] elements = grid.GetComponentsInChildren<InventoryElement>(includeInactive: true);
+            if (grid == null || !InventoryLayout.IsPlayerInventory(grid.GetInventory())) return;
+            EnsurePanel(grid);
+            var elements = new List<InventoryElement>(grid.GetComponentsInChildren<InventoryElement>(true));
+            if (_panel != null) elements.AddRange(_panel.GetComponentsInChildren<InventoryElement>(true));
             foreach (InventoryElement element in elements)
             {
-                if (element == null || element.m_button == null)
-                {
-                    continue;
-                }
-
+                if (element == null) continue;
+                RectTransform rect = element.GetElementRectTransform();
                 int id = element.GetInstanceID();
-                if (!OriginalColors.TryGetValue(id, out ColorBlock original))
-                {
-                    original = element.m_button.colors;
-                    OriginalColors[id] = original;
-                }
-
-                Vector2i position = element.Position;
-                bool reserved = InventoryLayout.IsReserved(position);
+                if (!OriginalParents.ContainsKey(id)) OriginalParents[id] = rect.parent;
+                int slotIndex = InventoryLayout.SlotIndex(element.Position, grid.GetInventory().GetWidth());
                 TMP_Text label = GetOrCreateLabel(element);
-                if (!reserved)
+                if (slotIndex < 0 || !DadsEPIPlugin.SeparateEquipmentPanel.Value)
                 {
-                    element.m_button.colors = original;
-                    label.gameObject.SetActive(false);
+                    if (OriginalParents.TryGetValue(id, out Transform original) && rect.parent != original)
+                    {
+                        rect.SetParent(original, false);
+                        rect.anchoredPosition = new Vector2(element.Position.x * grid.m_elementSpace, -element.Position.y * grid.m_elementSpace);
+                    }
+                    label.gameObject.SetActive(slotIndex >= 0);
+                    if (slotIndex >= 0) label.text = InventoryLayout.Slots[slotIndex].Label;
                     continue;
                 }
 
-                string labelText = GetLabel(position);
-                ColorBlock colors = original;
-                colors.normalColor = GetColor(position);
-                colors.selectedColor = colors.normalColor;
-                element.m_button.colors = colors;
-                label.text = labelText;
+                rect.SetParent(_panel, false);
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(0f, 1f);
+                rect.pivot = new Vector2(0f, 1f);
+                rect.anchoredPosition = PanelPosition(slotIndex, grid.m_elementSpace);
+                label.text = InventoryLayout.Slots[slotIndex].Label;
                 label.gameObject.SetActive(true);
             }
+            if (_panel != null) _panel.gameObject.SetActive(DadsEPIPlugin.SeparateEquipmentPanel.Value && InventoryLayout.Slots.Count > 0);
+        }
+
+        private static Vector2 PanelPosition(int slotIndex, float space)
+        {
+            if (slotIndex < InventoryLayout.EquipmentSlotCount)
+            {
+                int column = slotIndex / 4;
+                int row = slotIndex % 4;
+                return new Vector2(10f + column * space, -10f - row * space);
+            }
+            int quick = slotIndex - InventoryLayout.EquipmentSlotCount;
+            int perRow = Mathf.Min(4, Mathf.Max(1, InventoryLayout.EnabledQuickSlots));
+            int rowIndex = quick / perRow;
+            int columnIndex = quick % perRow;
+            return new Vector2(10f + columnIndex * space, -10f - 4.35f * space - rowIndex * space);
+        }
+
+        private static void EnsurePanel(InventoryGrid grid)
+        {
+            if (_panel != null) return;
+            Transform parent = InventoryGui.instance != null ? InventoryGui.instance.m_player : grid.transform.parent;
+            Transform existing = parent.Find(PanelName);
+            if (existing != null)
+            {
+                _panel = existing.GetComponent<RectTransform>();
+                return;
+            }
+            GameObject panelObject = new GameObject(PanelName, typeof(RectTransform), typeof(Image));
+            panelObject.transform.SetParent(parent, false);
+            _panel = panelObject.GetComponent<RectTransform>();
+            _panel.anchorMin = new Vector2(0f, 1f);
+            _panel.anchorMax = new Vector2(0f, 1f);
+            _panel.pivot = new Vector2(1f, 1f);
+            _panel.anchoredPosition = new Vector2(-12f, -12f);
+            int columns = Mathf.Max(2, Mathf.Min(4, InventoryLayout.EnabledQuickSlots));
+            int quickRows = Mathf.CeilToInt(InventoryLayout.EnabledQuickSlots / (float)columns);
+            _panel.sizeDelta = new Vector2(Mathf.Max(2, columns) * grid.m_elementSpace + 20f, (4.4f + quickRows) * grid.m_elementSpace + 20f);
+            Image panelImage = panelObject.GetComponent<Image>();
+            Image sourceImage = parent.GetComponent<Image>();
+            if (sourceImage != null)
+            {
+                panelImage.sprite = sourceImage.sprite;
+                panelImage.type = sourceImage.type;
+                panelImage.material = sourceImage.material;
+            }
+            panelImage.color = new Color(0.12f, 0.09f, 0.07f, 0.94f);
+            panelImage.raycastTarget = false;
+            _panel.SetAsFirstSibling();
         }
 
         private static TMP_Text GetOrCreateLabel(InventoryElement element)
         {
             Transform existing = element.transform.Find(LabelName);
-            if (existing != null)
-            {
-                return existing.GetComponent<TMP_Text>();
-            }
-
+            if (existing != null) return existing.GetComponent<TMP_Text>();
             GameObject labelObject = new GameObject(LabelName, typeof(RectTransform), typeof(TextMeshProUGUI));
-            labelObject.transform.SetParent(element.transform, worldPositionStays: false);
-            RectTransform rect = (RectTransform)labelObject.transform;
+            labelObject.transform.SetParent(element.transform, false);
+            RectTransform rect = labelObject.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(3f, 2f);
-            rect.offsetMax = new Vector2(-3f, -2f);
-
+            rect.offsetMin = new Vector2(2f, 2f);
+            rect.offsetMax = new Vector2(-2f, -2f);
             TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
-            label.alignment = TextAlignmentOptions.TopLeft;
-            label.fontSize = 9f;
+            if (element.m_amount != null)
+            {
+                label.font = element.m_amount.font;
+                label.fontSharedMaterial = element.m_amount.fontSharedMaterial;
+            }
+            label.enabled = true;
+            label.alignment = TextAlignmentOptions.Top;
+            label.fontSize = 11f;
             label.fontStyle = FontStyles.Bold;
-            label.color = new Color(0.95f, 0.86f, 0.62f, 0.90f);
+            label.color = new Color(0.95f, 0.84f, 0.60f, 1f);
             label.raycastTarget = false;
             return label;
         }
-
-        private static string GetLabel(Vector2i position)
-        {
-            if (position.y == InventoryLayout.QuickRow)
-            {
-                return position.x < InventoryLayout.EnabledQuickSlots ? $"Q{position.x + 1}" : "";
-            }
-
-            if (position.y != InventoryLayout.EquipmentRow)
-            {
-                return "";
-            }
-
-            switch (position.x)
-            {
-                case 0: return "HEAD";
-                case 1: return "BODY";
-                case 2: return "LEGS";
-                case 3: return "BACK";
-                case 4: return "UTIL";
-                case 5: return "HANDS";
-                case 6: return "TRINKET";
-                default: return "";
-            }
-        }
-
-        private static Color GetColor(Vector2i position)
-        {
-            if (position.y == InventoryLayout.QuickRow)
-            {
-                return position.x < InventoryLayout.EnabledQuickSlots ? QuickColor : DisabledColor;
-            }
-
-            return position.y == InventoryLayout.EquipmentRow && position.x <= 6 ? EquipmentColor : DisabledColor;
-        }
     }
 }
-

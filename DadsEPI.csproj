@@ -5,7 +5,7 @@
     <Nullable>disable</Nullable>
     <AssemblyName>DadsEPI</AssemblyName>
     <RootNamespace>DadsEPI</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Deterministic>true</Deterministic>
     <DebugType>portable</DebugType>
     <ValheimManagedPath Condition="'$(ValheimManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim\valheim_Data\Managed</ValheimManagedPath>
@@ -47,6 +47,10 @@
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>$(ValheimManagedPath)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(ValheimManagedPath)\UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro">

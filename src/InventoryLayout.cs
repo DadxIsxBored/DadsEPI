@@ -1,256 +1,213 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace DadsEPI
 {
+    internal sealed class DedicatedSlot
+    {
+        internal string Id;
+        internal string Label;
+        internal bool Quick;
+        internal Func<ItemDrop.ItemData, bool> Accepts;
+    }
+
     internal static class InventoryLayout
     {
-        internal const int VanillaRows = 4;
+        internal const int BaseVanillaRows = 4;
+        internal const int MaximumVanillaRows = 9;
+        internal static readonly List<DedicatedSlot> Slots = new List<DedicatedSlot>();
+        internal static int VanillaRows { get; private set; } = BaseVanillaRows;
         private static bool _normalizing;
 
-        internal static int TotalRows
+        internal static int NormalRows => Mathf.Clamp(VanillaRows, BaseVanillaRows, MaximumVanillaRows) + Mathf.Clamp(DadsEPIPlugin.ExtraRows.Value, 0, 5);
+        internal static int EquipmentSlotCount => Slots.Count(slot => !slot.Quick);
+        internal static int EnabledQuickSlots => DadsEPIPlugin.EquipmentRowEnabled.Value ? Mathf.Clamp(DadsEPIPlugin.QuickSlotCount.Value, 0, 8) : 0;
+        internal static int StorageRows(int width) => DadsEPIPlugin.EquipmentRowEnabled.Value ? Mathf.CeilToInt(Slots.Count / (float)Mathf.Max(1, width)) : 0;
+        internal static int TotalRows(int width) => NormalRows + StorageRows(width);
+
+        internal static void RebuildSlots()
         {
-            get
+            Slots.Clear();
+            if (DadsEPIPlugin.EquipmentRowEnabled?.Value != true) return;
+            AddEquipment("Head", DadsEPIPlugin.HeadLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet);
+            AddEquipment("Chest", DadsEPIPlugin.ChestLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest);
+            AddEquipment("Legs", DadsEPIPlugin.LegsLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs);
+            AddEquipment("Back", DadsEPIPlugin.BackLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder);
+            AddEquipment("Utility", DadsEPIPlugin.UtilityLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility &&
+                (!DadsEPIPlugin.WishboneSlot.Value || !IsPrefab(item, "Wishbone")) &&
+                (!DadsEPIPlugin.DemisterSlot.Value || !IsDemister(item)));
+            AddEquipment("Trinket", DadsEPIPlugin.TrinketLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trinket);
+            if (DadsEPIPlugin.WishboneSlot.Value) AddEquipment("Wishbone", "Wishbone", item => IsPrefab(item, "Wishbone"));
+            if (DadsEPIPlugin.DemisterSlot.Value) AddEquipment("Demister", "Demister", IsDemister);
+
+            foreach (string definition in (DadsEPIPlugin.CustomEquipmentSlots.Value ?? string.Empty).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                int reservedRows = (DadsEPIPlugin.EquipmentRowEnabled.Value ? 1 : 0)
-                                   + (DadsEPIPlugin.QuickRowEnabled.Value ? 1 : 0);
-                return Mathf.Clamp(VanillaRows + Mathf.Clamp(DadsEPIPlugin.GeneralExtraRows.Value, 0, 3) + reservedRows, VanillaRows, 9);
+                int separator = definition.IndexOf(':');
+                if (separator <= 0) continue;
+                string name = definition.Substring(0, separator).Trim();
+                var prefabs = new HashSet<string>(definition.Substring(separator + 1).Split(',').Select(value => value.Trim()).Where(value => value.Length > 0), StringComparer.Ordinal);
+                if (name.Length > 0 && prefabs.Count > 0) AddEquipment(name, name, item => prefabs.Contains(PrefabName(item)));
+            }
+
+            for (int index = 0; index < Mathf.Clamp(DadsEPIPlugin.QuickSlotCount.Value, 0, 8); index++)
+            {
+                int captured = index;
+                Slots.Add(new DedicatedSlot { Id = $"Quick{captured + 1}", Label = QuickLabel(captured), Quick = true, Accepts = item => true });
             }
         }
 
-        internal static int FirstReservedRow => TotalRows
-                                                - (DadsEPIPlugin.EquipmentRowEnabled.Value ? 1 : 0)
-                                                - (DadsEPIPlugin.QuickRowEnabled.Value ? 1 : 0);
+        internal static void SetVanillaRows(int rows)
+        {
+            VanillaRows = Mathf.Clamp(rows, BaseVanillaRows, MaximumVanillaRows);
+        }
 
-        internal static int EquipmentRow => DadsEPIPlugin.EquipmentRowEnabled.Value ? FirstReservedRow : -1;
-
-        internal static int QuickRow => DadsEPIPlugin.QuickRowEnabled.Value ? TotalRows - 1 : -1;
-
-        internal static int EnabledQuickSlots => Mathf.Clamp(DadsEPIPlugin.QuickSlotCount.Value, 1, 8);
+        internal static void ReadVanillaRows(Player player)
+        {
+            if (player != null && player.TryGetUniqueKeyValue(Player.InventoryRowsKey, out string value) && int.TryParse(value, out int rows)) SetVanillaRows(rows);
+            else SetVanillaRows(BaseVanillaRows);
+        }
 
         internal static void Apply(Player player, bool normalizeItems)
         {
-            if (player == null || DadsEPIPlugin.ModEnabled?.Value != true)
-            {
-                return;
-            }
-
+            if (player == null || DadsEPIPlugin.ModEnabled?.Value != true) return;
             Inventory inventory = player.GetInventory();
-            if (inventory == null)
-            {
-                return;
-            }
-
-            if (inventory.GetHeight() != TotalRows)
-            {
-                inventory.SetHeight(TotalRows);
-            }
-
+            if (inventory == null) return;
+            ReadVanillaRows(player);
+            int target = TotalRows(inventory.GetWidth());
+            if (inventory.GetHeight() < target) inventory.SetHeight(target);
+            if (normalizeItems) Normalize(player, inventory);
+            int occupiedHeight = inventory.GetAllItems().Count == 0 ? 0 : inventory.GetAllItems().Max(item => item.m_gridPos.y + 1);
+            int safeHeight = Mathf.Max(target, occupiedHeight);
+            if (inventory.GetHeight() != safeHeight) inventory.SetHeight(safeHeight);
             if (InventoryGui.instance != null)
+                InventoryGui.instance.SetInventorySize(DadsEPIPlugin.SeparateEquipmentPanel.Value ? NormalRows : safeHeight);
+            if (player.m_tombstone != null)
             {
-                InventoryGui.instance.SetInventorySize(TotalRows);
-            }
-
-            if (normalizeItems)
-            {
-                NormalizeReservedRows(player, inventory);
+                Container tombstone = player.m_tombstone.GetComponent<Container>();
+                if (tombstone != null) tombstone.m_height = safeHeight;
             }
         }
 
         internal static bool IsPlayerInventory(Inventory inventory)
         {
-            return inventory != null
-                   && Player.m_localPlayer != null
-                   && ReferenceEquals(inventory, Player.m_localPlayer.GetInventory());
+            return inventory != null && Player.m_localPlayer != null && ReferenceEquals(inventory, Player.m_localPlayer.GetInventory());
         }
 
-        internal static bool IsReserved(Vector2i position)
+        internal static int SlotIndex(Vector2i position, int width)
         {
-            return position.y >= FirstReservedRow && position.y < TotalRows;
+            int linear = position.y * width + position.x - NormalRows * width;
+            return linear >= 0 && linear < Slots.Count ? linear : -1;
         }
 
-        internal static bool CanPlace(ItemDrop.ItemData item, Vector2i position)
+        internal static Vector2i SlotPosition(int slotIndex, int width)
         {
-            if (!IsReserved(position))
-            {
-                return true;
-            }
-
-            if (item == null)
-            {
-                return false;
-            }
-
-            if (position.y == QuickRow)
-            {
-                return position.x >= 0 && position.x < EnabledQuickSlots;
-            }
-
-            if (position.y == EquipmentRow)
-            {
-                return EquipmentColumn(item.m_shared.m_itemType) == position.x;
-            }
-
-            return false;
+            int linear = NormalRows * width + slotIndex;
+            return new Vector2i(linear % width, linear / width);
         }
 
-        internal static int EquipmentColumn(ItemDrop.ItemData.ItemType itemType)
+        internal static bool IsReserved(Vector2i position, int width) => SlotIndex(position, width) >= 0;
+
+        internal static bool CanPlace(ItemDrop.ItemData item, Vector2i position, int width)
         {
-            switch (itemType)
-            {
-                case ItemDrop.ItemData.ItemType.Helmet: return 0;
-                case ItemDrop.ItemData.ItemType.Chest: return 1;
-                case ItemDrop.ItemData.ItemType.Legs: return 2;
-                case ItemDrop.ItemData.ItemType.Shoulder: return 3;
-                case ItemDrop.ItemData.ItemType.Utility: return 4;
-                case ItemDrop.ItemData.ItemType.Hands: return 5;
-                case ItemDrop.ItemData.ItemType.Trinket: return 6;
-                default: return -1;
-            }
+            int index = SlotIndex(position, width);
+            if (index < 0) return position.y < NormalRows;
+            return item == null || Slots[index].Accepts(item);
         }
 
         internal static Vector2i FindGeneralEmpty(Inventory inventory, bool topFirst)
         {
-            int width = inventory.GetWidth();
             if (topFirst)
             {
-                for (int y = 0; y < FirstReservedRow; ++y)
-                {
-                    for (int x = 0; x < width; ++x)
-                    {
-                        if (inventory.GetItemAt(x, y) == null) return new Vector2i(x, y);
-                    }
-                }
+                for (int y = 0; y < NormalRows; y++) for (int x = 0; x < inventory.GetWidth(); x++) if (inventory.GetItemAt(x, y) == null) return new Vector2i(x, y);
             }
             else
             {
-                for (int y = FirstReservedRow - 1; y >= 0; --y)
-                {
-                    for (int x = 0; x < width; ++x)
-                    {
-                        if (inventory.GetItemAt(x, y) == null) return new Vector2i(x, y);
-                    }
-                }
+                for (int y = NormalRows - 1; y >= 0; y--) for (int x = 0; x < inventory.GetWidth(); x++) if (inventory.GetItemAt(x, y) == null) return new Vector2i(x, y);
             }
-
             return new Vector2i(-1, -1);
         }
 
         internal static int CountGeneralEmpty(Inventory inventory)
         {
             int count = 0;
-            for (int y = 0; y < FirstReservedRow; ++y)
-            {
-                for (int x = 0; x < inventory.GetWidth(); ++x)
-                {
-                    if (inventory.GetItemAt(x, y) == null) ++count;
-                }
-            }
-
+            for (int y = 0; y < NormalRows; y++) for (int x = 0; x < inventory.GetWidth(); x++) if (inventory.GetItemAt(x, y) == null) count++;
             return count;
         }
 
         internal static void UseQuickSlot(int index)
         {
             Player player = Player.m_localPlayer;
-            if (player == null || index < 0 || index >= EnabledQuickSlots || QuickRow < 0)
-            {
-                return;
-            }
-
-            Inventory inventory = player.GetInventory();
-            ItemDrop.ItemData item = inventory.GetItemAt(index, QuickRow);
-            if (item != null)
-            {
-                player.UseItem(inventory, item, fromInventoryGui: false);
-            }
+            if (player == null || index < 0 || index >= EnabledQuickSlots) return;
+            int slot = EquipmentSlotCount + index;
+            ItemDrop.ItemData item = player.GetInventory().GetItemAt(SlotPosition(slot, player.GetInventory().GetWidth()).x, SlotPosition(slot, player.GetInventory().GetWidth()).y);
+            if (item != null) player.UseItem(player.GetInventory(), item, false);
         }
 
-        internal static void MoveEquippedItemToReservedSlot(Player player, ItemDrop.ItemData item)
+        internal static void MoveEquippedItemToDedicatedSlot(Player player, ItemDrop.ItemData item)
         {
-            if (_normalizing || player == null || item == null || EquipmentRow < 0)
-            {
-                return;
-            }
-
-            int column = EquipmentColumn(item.m_shared.m_itemType);
-            if (column < 0 || column >= player.GetInventory().GetWidth())
-            {
-                return;
-            }
-
-            MoveItem(player, player.GetInventory(), item, new Vector2i(column, EquipmentRow));
+            if (_normalizing || player == null || item == null) return;
+            int slot = FindEquipmentSlot(item);
+            if (slot >= 0) MoveItem(player, player.GetInventory(), item, SlotPosition(slot, player.GetInventory().GetWidth()));
         }
 
-        private static void NormalizeReservedRows(Player player, Inventory inventory)
+        internal static int FindEquipmentSlot(ItemDrop.ItemData item)
         {
-            if (_normalizing)
-            {
-                return;
-            }
+            for (int index = 0; index < EquipmentSlotCount; index++) if (Slots[index].Accepts(item)) return index;
+            return -1;
+        }
 
+        private static void Normalize(Player player, Inventory inventory)
+        {
+            if (_normalizing) return;
             _normalizing = true;
             try
             {
-                List<ItemDrop.ItemData> items = new List<ItemDrop.ItemData>(inventory.GetAllItems());
-
-                if (EquipmentRow >= 0)
+                foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(inventory.GetAllItems()))
                 {
-                    foreach (ItemDrop.ItemData item in items)
-                    {
-                        if (item.m_equipped)
-                        {
-                            int column = EquipmentColumn(item.m_shared.m_itemType);
-                            if (column >= 0 && column < inventory.GetWidth())
-                            {
-                                MoveItem(player, inventory, item, new Vector2i(column, EquipmentRow));
-                            }
-                        }
-                    }
+                    if (!item.m_equipped) continue;
+                    int slot = FindEquipmentSlot(item);
+                    if (slot >= 0) MoveItem(player, inventory, item, SlotPosition(slot, inventory.GetWidth()));
                 }
-
-                items = new List<ItemDrop.ItemData>(inventory.GetAllItems());
-                foreach (ItemDrop.ItemData item in items)
+                foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(inventory.GetAllItems()))
                 {
-                    if (!IsReserved(item.m_gridPos) || CanPlace(item, item.m_gridPos))
-                    {
-                        continue;
-                    }
-
-                    Vector2i empty = FindGeneralEmpty(inventory, topFirst: true);
-                    if (empty.x >= 0)
-                    {
-                        MoveItem(player, inventory, item, empty);
-                    }
+                    if (item.m_gridPos.y < NormalRows || CanPlace(item, item.m_gridPos, inventory.GetWidth())) continue;
+                    Vector2i empty = FindGeneralEmpty(inventory, true);
+                    if (empty.x >= 0) MoveItem(player, inventory, item, empty);
                 }
             }
-            finally
-            {
-                _normalizing = false;
-            }
+            finally { _normalizing = false; }
         }
 
         private static void MoveItem(Player player, Inventory inventory, ItemDrop.ItemData item, Vector2i destination)
         {
-            if (item.m_gridPos == destination)
-            {
-                return;
-            }
-
+            if (item.m_gridPos == destination) return;
             ItemDrop.ItemData occupant = inventory.GetItemAt(destination.x, destination.y);
             Vector2i source = item.m_gridPos;
             if (occupant != null && !ReferenceEquals(occupant, item))
             {
-                if (occupant.m_equipped)
-                {
-                    player.UnequipItem(occupant, triggerEquipEffects: false);
-                }
-                occupant.m_gridPos = source;
+                Vector2i empty = FindGeneralEmpty(inventory, true);
+                occupant.m_gridPos = empty.x >= 0 ? empty : source;
             }
-
             item.m_gridPos = destination;
             inventory.m_onChanged?.Invoke();
         }
+
+        private static void AddEquipment(string id, string label, Func<ItemDrop.ItemData, bool> accepts)
+        {
+            var removed = new HashSet<string>((DadsEPIPlugin.RemovedEquipmentSlots.Value ?? string.Empty).Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(value => value.Trim()), StringComparer.OrdinalIgnoreCase);
+            if (!removed.Contains(id) && !removed.Contains(label)) Slots.Add(new DedicatedSlot { Id = id, Label = label, Accepts = accepts });
+        }
+
+        private static string QuickLabel(int index)
+        {
+            string configured = DadsEPIPlugin.QuickHotkeyLabels[index].Value;
+            return string.IsNullOrWhiteSpace(configured) ? DadsEPIPlugin.QuickHotkeys[index].Value.ToString() : configured;
+        }
+
+        private static string PrefabName(ItemDrop.ItemData item) => item?.m_dropPrefab != null ? Utils.GetPrefabName(item.m_dropPrefab) : string.Empty;
+        private static bool IsPrefab(ItemDrop.ItemData item, string prefab) => string.Equals(PrefabName(item), prefab, StringComparison.Ordinal);
+        private static bool IsDemister(ItemDrop.ItemData item) => IsPrefab(item, "Demister") || IsPrefab(item, "Wisplight");
     }
 }
-
