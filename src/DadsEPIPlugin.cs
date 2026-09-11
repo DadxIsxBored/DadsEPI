@@ -13,7 +13,7 @@ namespace DadsEPI
     {
         public const string PluginGuid = "com.dadisbored.dadsepi";
         public const string PluginName = "DadsEPI";
-        public const string PluginVersion = "0.3.0";
+        public const string PluginVersion = "0.3.2";
 
         internal static ConfigEntry<bool> ModEnabled;
         internal static ConfigEntry<int> ExtraRows;
@@ -137,7 +137,15 @@ namespace DadsEPI
             }
             if (InputBlocked()) return;
             for (int index = 0; index < InventoryLayout.EnabledQuickSlots; index++)
-                if (QuickHotkeys[index].Value.IsDown()) InventoryLayout.UseQuickSlot(index);
+                if (ShortcutPressed(QuickHotkeys[index].Value)) InventoryLayout.UseQuickSlot(index);
+        }
+
+        private static bool ShortcutPressed(KeyboardShortcut shortcut)
+        {
+            if (shortcut.MainKey == KeyCode.None || !Input.GetKeyDown(shortcut.MainKey)) return false;
+            foreach (KeyCode modifier in shortcut.Modifiers)
+                if (!Input.GetKey(modifier)) return false;
+            return true;
         }
 
         private static bool InputBlocked()

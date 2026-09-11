@@ -16,19 +16,26 @@ namespace DadsEPI
 
         internal static void Reset()
         {
+            var elements = new List<InventoryElement>();
+            if (InventoryGui.instance != null && InventoryGui.instance.m_playerGrid != null)
+                elements.AddRange(InventoryGui.instance.m_playerGrid.GetComponentsInChildren<InventoryElement>(true));
             if (_panel != null)
+                elements.AddRange(_panel.GetComponentsInChildren<InventoryElement>(true));
+            foreach (InventoryElement element in elements)
             {
-                foreach (InventoryElement element in _panel.GetComponentsInChildren<InventoryElement>(true))
+                if (element == null) continue;
+                int id = element.GetInstanceID();
+                RectTransform rect = element.transform as RectTransform;
+                if (rect != null && OriginalParents.TryGetValue(id, out Transform original) && original != null)
                 {
-                    if (OriginalParents.TryGetValue(element.GetInstanceID(), out Transform original) && original != null)
-                    {
-                        element.transform.SetParent(original, false);
-                        if (OriginalPositions.TryGetValue(element.GetInstanceID(), out Vector2 position))
-                            ((RectTransform)element.transform).anchoredPosition = position;
-                    }
+                    rect.SetParent(original, false);
+                    if (OriginalPositions.TryGetValue(id, out Vector2 position)) rect.anchoredPosition = position;
                 }
-                Object.Destroy(_panel.gameObject);
+                element.gameObject.SetActive(true);
+                Transform label = element.transform.Find(LabelName);
+                if (label != null) label.gameObject.SetActive(false);
             }
+            if (_panel != null) Object.Destroy(_panel.gameObject);
             _panel = null;
             OriginalParents.Clear();
             OriginalPositions.Clear();
@@ -52,6 +59,13 @@ namespace DadsEPI
                     OriginalPositions[id] = rect.anchoredPosition;
                 }
                 int slotIndex = InventoryLayout.SlotIndex(element.Position, grid.GetInventory().GetWidth());
+                bool unusedStorageCell = slotIndex < 0 && element.Position.y >= InventoryLayout.NormalRows;
+                if (unusedStorageCell)
+                {
+                    rect.gameObject.SetActive(false);
+                    continue;
+                }
+                rect.gameObject.SetActive(true);
                 TMP_Text label = GetOrCreateLabel(element);
                 if (slotIndex < 0 || !DadsEPIPlugin.SeparateEquipmentPanel.Value)
                 {

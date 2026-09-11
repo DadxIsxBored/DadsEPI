@@ -1,6 +1,6 @@
 {
   "name": "DadsEPI",
-  "version_number": "0.3.0",
+  "version_number": "0.3.2",
   "website_url": "https://github.com/DadxIsxBored/DadsEPI",
   "description": "Labeled equipment compartments, configurable quick slots, and native-sized inventory for Valheim 1.0.",
   "dependencies": [

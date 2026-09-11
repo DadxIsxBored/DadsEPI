@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.2
+
+- Changed quick-slot shortcut detection so held movement, sprint, crouch, and other unrelated keys do not block activation.
+
+## 0.3.1
+
+- Hid unused padding cells in the final internal equipment-storage row so they cannot appear outside the inventory or equipment panel.
+- Restored hidden cells and removed slot labels when the visual layout resets.
+
 ## 0.3.0
 
 - Moved the equipment grid outside the inventory hierarchy and positioned it directly to the inventory's right side.
