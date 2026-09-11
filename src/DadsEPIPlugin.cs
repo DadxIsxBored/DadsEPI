@@ -13,7 +13,7 @@ namespace DadsEPI
     {
         public const string PluginGuid = "com.dadisbored.dadsepi";
         public const string PluginName = "DadsEPI";
-        public const string PluginVersion = "0.2.0";
+        public const string PluginVersion = "0.3.0";
 
         internal static ConfigEntry<bool> ModEnabled;
         internal static ConfigEntry<int> ExtraRows;
@@ -24,17 +24,20 @@ namespace DadsEPI
         internal static ConfigEntry<bool> ShowQuickSlots;
         internal static ConfigEntry<bool> AlwaysShowQuickSlots;
         internal static ConfigEntry<int> QuickSlotsPerRow;
+        internal static ConfigEntry<bool> WisplightSlot;
         internal static ConfigEntry<bool> WishboneSlot;
-        internal static ConfigEntry<bool> DemisterSlot;
-        internal static ConfigEntry<bool> OneUtilityAtATime;
+        internal static ConfigEntry<bool> CryptKeySlot;
+        internal static ConfigEntry<bool> ArrowsSlot;
+        internal static ConfigEntry<bool> ShieldSlot;
+        internal static ConfigEntry<bool> UtilitySlot;
         internal static ConfigEntry<string> RemovedEquipmentSlots;
-        internal static ConfigEntry<string> CustomEquipmentSlots;
+        internal static readonly ConfigEntry<string>[] CustomSlotNames = new ConfigEntry<string>[10];
+        internal static readonly ConfigEntry<string>[] CustomSlotItems = new ConfigEntry<string>[10];
         internal static ConfigEntry<string> HeadLabel;
         internal static ConfigEntry<string> ChestLabel;
         internal static ConfigEntry<string> LegsLabel;
         internal static ConfigEntry<string> BackLabel;
         internal static ConfigEntry<string> UtilityLabel;
-        internal static ConfigEntry<string> TrinketLabel;
         internal static ConfigEntry<float> HudScale;
         internal static ConfigEntry<Vector2> HudPosition;
         internal static ConfigEntry<KeyboardShortcut> HudDragKeys;
@@ -62,18 +65,25 @@ namespace DadsEPI
             QuickSlotsPerRow = Config.Bind("3 - Quick Slots", "Slots Per Row", 8,
                 new ConfigDescription("Maximum quick slots per HUD row.", new AcceptableValueRange<int>(1, 8)));
 
+            WisplightSlot = Config.Bind("4 - Special Equipment Slots", "Enable Wisplight Slot", true, "Add a Wisplight-only slot.");
             WishboneSlot = Config.Bind("4 - Special Equipment Slots", "Enable Wishbone Slot", true, "Add a Wishbone-only slot.");
-            DemisterSlot = Config.Bind("4 - Special Equipment Slots", "Enable Demister Slot", true, "Add a Demister-only slot.");
-            OneUtilityAtATime = Config.Bind("4 - Special Equipment Slots", "One Utility Item At A Time", false, "Use vanilla utility-item exclusivity.");
+            CryptKeySlot = Config.Bind("4 - Special Equipment Slots", "Enable Crypt Key Slot", true, "Add a Crypt Key-only slot.");
+            ArrowsSlot = Config.Bind("4 - Special Equipment Slots", "Enable Arrows Slot", true, "Add an arrow-ammunition slot.");
+            ShieldSlot = Config.Bind("4 - Special Equipment Slots", "Enable Shield Slot", true, "Add a shield-only slot.");
+            UtilitySlot = Config.Bind("4 - Special Equipment Slots", "Enable Utility Slot", true, "Add a utility-item slot.");
             RemovedEquipmentSlots = Config.Bind("4.5 - Equipment Slot Management", "Removed Equipment Slots", "", "Comma or semicolon separated slot names.");
-            CustomEquipmentSlots = Config.Bind("4.5 - Equipment Slot Management", "Custom Equipment Slots", "", "SlotName:Prefab1,Prefab2;SlotName2:Prefab3");
+            for (int index = 0; index < CustomSlotNames.Length; index++)
+            {
+                int slot = index + 1;
+                CustomSlotNames[index] = Config.Bind("4.5 - Equipment Slot Management", $"Custom Slot {slot} Name", "", "Visible name for this custom equipment slot. Leave blank to disable it.");
+                CustomSlotItems[index] = Config.Bind("4.5 - Equipment Slot Management", $"Custom Slot {slot} Items", "", "Comma-separated exact in-game prefab names accepted by this slot.");
+            }
 
             HeadLabel = Config.Bind("6 - Equipment Slot Labels", "Head Slot Label", "Head", "Helmet slot label.");
             ChestLabel = Config.Bind("6 - Equipment Slot Labels", "Chest Slot Label", "Chest", "Chest slot label.");
             LegsLabel = Config.Bind("6 - Equipment Slot Labels", "Legs Slot Label", "Legs", "Leg slot label.");
             BackLabel = Config.Bind("6 - Equipment Slot Labels", "Back Slot Label", "Back", "Shoulder slot label.");
             UtilityLabel = Config.Bind("6 - Equipment Slot Labels", "Utility Slot Label", "Utility", "Utility slot label.");
-            TrinketLabel = Config.Bind("6 - Equipment Slot Labels", "Trinket Slot Label", "Trinket", "Trinket slot label.");
 
             HudScale = Config.Bind("7 - Quick Slots Customization", "HUD Size", 1f, "Quick-slot HUD scale.");
             HudPosition = Config.Bind("7 - Quick Slots Customization", "HUD Position", new Vector2(47f, -115f), "Quick-slot HUD anchored position.");
@@ -95,8 +105,9 @@ namespace DadsEPI
 
             Watch(ModEnabled); Watch(ExtraRows); Watch(EquipmentRowEnabled); Watch(SeparateEquipmentPanel); Watch(AutoEquip);
             Watch(QuickSlotCount); Watch(ShowQuickSlots); Watch(AlwaysShowQuickSlots); Watch(QuickSlotsPerRow);
-            Watch(WishboneSlot); Watch(DemisterSlot); Watch(OneUtilityAtATime); Watch(RemovedEquipmentSlots); Watch(CustomEquipmentSlots);
-            Watch(HeadLabel); Watch(ChestLabel); Watch(LegsLabel); Watch(BackLabel); Watch(UtilityLabel); Watch(TrinketLabel);
+            Watch(WisplightSlot); Watch(WishboneSlot); Watch(CryptKeySlot); Watch(ArrowsSlot); Watch(ShieldSlot); Watch(UtilitySlot); Watch(RemovedEquipmentSlots);
+            for (int index = 0; index < CustomSlotNames.Length; index++) { Watch(CustomSlotNames[index]); Watch(CustomSlotItems[index]); }
+            Watch(HeadLabel); Watch(ChestLabel); Watch(LegsLabel); Watch(BackLabel); Watch(UtilityLabel);
             for (int index = 0; index < 8; index++) { Watch(QuickHotkeys[index]); Watch(QuickHotkeyLabels[index]); }
             InventoryLayout.RebuildSlots();
             _harmony = new Harmony(PluginGuid);

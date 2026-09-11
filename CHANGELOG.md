@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Moved the equipment grid outside the inventory hierarchy and positioned it directly to the inventory's right side.
+- Added the default Head, Chest, Legs, Back, Wisplight, Wishbone, Crypt Key, Arrows, Shield, and Utility slots in that order.
+- Added individual toggles for Wisplight, Wishbone, Crypt Key, Arrows, Shield, and Utility slots.
+- Replaced the combined custom-slot definition with ten paired Name and Items settings using exact comma-separated prefab names.
+- Preserved original inventory-cell parents and positions when switching panel modes.
+
 ## 0.2.0
 
 - Changed the default ordinary inventory expansion from two rows to zero.

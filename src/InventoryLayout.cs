@@ -35,19 +35,19 @@ namespace DadsEPI
             AddEquipment("Chest", DadsEPIPlugin.ChestLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest);
             AddEquipment("Legs", DadsEPIPlugin.LegsLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs);
             AddEquipment("Back", DadsEPIPlugin.BackLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder);
-            AddEquipment("Utility", DadsEPIPlugin.UtilityLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility &&
-                (!DadsEPIPlugin.WishboneSlot.Value || !IsPrefab(item, "Wishbone")) &&
-                (!DadsEPIPlugin.DemisterSlot.Value || !IsDemister(item)));
-            AddEquipment("Trinket", DadsEPIPlugin.TrinketLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trinket);
+            if (DadsEPIPlugin.WisplightSlot.Value) AddEquipment("Wisplight", "Wisplight", IsWisplight);
             if (DadsEPIPlugin.WishboneSlot.Value) AddEquipment("Wishbone", "Wishbone", item => IsPrefab(item, "Wishbone"));
-            if (DadsEPIPlugin.DemisterSlot.Value) AddEquipment("Demister", "Demister", IsDemister);
+            if (DadsEPIPlugin.CryptKeySlot.Value) AddEquipment("Crypt Key", "Crypt Key", item => IsPrefab(item, "CryptKey"));
+            if (DadsEPIPlugin.ArrowsSlot.Value) AddEquipment("Arrows", "Arrows", IsArrow);
+            if (DadsEPIPlugin.ShieldSlot.Value) AddEquipment("Shield", "Shield", item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shield);
+            if (DadsEPIPlugin.UtilitySlot.Value) AddEquipment("Utility", DadsEPIPlugin.UtilityLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility &&
+                (!DadsEPIPlugin.WishboneSlot.Value || !IsPrefab(item, "Wishbone")) &&
+                (!DadsEPIPlugin.WisplightSlot.Value || !IsWisplight(item)));
 
-            foreach (string definition in (DadsEPIPlugin.CustomEquipmentSlots.Value ?? string.Empty).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            for (int index = 0; index < DadsEPIPlugin.CustomSlotNames.Length; index++)
             {
-                int separator = definition.IndexOf(':');
-                if (separator <= 0) continue;
-                string name = definition.Substring(0, separator).Trim();
-                var prefabs = new HashSet<string>(definition.Substring(separator + 1).Split(',').Select(value => value.Trim()).Where(value => value.Length > 0), StringComparer.Ordinal);
+                string name = (DadsEPIPlugin.CustomSlotNames[index].Value ?? string.Empty).Trim();
+                var prefabs = new HashSet<string>((DadsEPIPlugin.CustomSlotItems[index].Value ?? string.Empty).Split(',').Select(value => value.Trim()).Where(value => value.Length > 0), StringComparer.Ordinal);
                 if (name.Length > 0 && prefabs.Count > 0) AddEquipment(name, name, item => prefabs.Contains(PrefabName(item)));
             }
 
@@ -208,6 +208,12 @@ namespace DadsEPI
 
         private static string PrefabName(ItemDrop.ItemData item) => item?.m_dropPrefab != null ? Utils.GetPrefabName(item.m_dropPrefab) : string.Empty;
         private static bool IsPrefab(ItemDrop.ItemData item, string prefab) => string.Equals(PrefabName(item), prefab, StringComparison.Ordinal);
-        private static bool IsDemister(ItemDrop.ItemData item) => IsPrefab(item, "Demister") || IsPrefab(item, "Wisplight");
+        private static bool IsWisplight(ItemDrop.ItemData item) => IsPrefab(item, "Demister") || IsPrefab(item, "Wisplight");
+        private static bool IsArrow(ItemDrop.ItemData item)
+        {
+            if (item?.m_shared == null) return false;
+            ItemDrop.ItemData.ItemType type = item.m_shared.m_itemType;
+            return (type == ItemDrop.ItemData.ItemType.Ammo || type == ItemDrop.ItemData.ItemType.AmmoNonEquipable) && PrefabName(item).StartsWith("Arrow", StringComparison.Ordinal);
+        }
     }
 }

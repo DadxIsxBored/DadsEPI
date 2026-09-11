@@ -9,7 +9,9 @@ namespace DadsEPI
     {
         private const string PanelName = "DadsEPI_EquipmentPanel";
         private const string LabelName = "DadsEPI_SlotLabel";
+        private const int EquipmentColumns = 3;
         private static readonly Dictionary<int, Transform> OriginalParents = new Dictionary<int, Transform>();
+        private static readonly Dictionary<int, Vector2> OriginalPositions = new Dictionary<int, Vector2>();
         private static RectTransform _panel;
 
         internal static void Reset()
@@ -19,12 +21,17 @@ namespace DadsEPI
                 foreach (InventoryElement element in _panel.GetComponentsInChildren<InventoryElement>(true))
                 {
                     if (OriginalParents.TryGetValue(element.GetInstanceID(), out Transform original) && original != null)
+                    {
                         element.transform.SetParent(original, false);
+                        if (OriginalPositions.TryGetValue(element.GetInstanceID(), out Vector2 position))
+                            ((RectTransform)element.transform).anchoredPosition = position;
+                    }
                 }
                 Object.Destroy(_panel.gameObject);
             }
             _panel = null;
             OriginalParents.Clear();
+            OriginalPositions.Clear();
         }
 
         internal static void Refresh(InventoryGrid grid)
@@ -36,9 +43,14 @@ namespace DadsEPI
             foreach (InventoryElement element in elements)
             {
                 if (element == null) continue;
-                RectTransform rect = element.GetElementRectTransform();
+                RectTransform rect = element.transform as RectTransform;
+                if (rect == null) continue;
                 int id = element.GetInstanceID();
-                if (!OriginalParents.ContainsKey(id)) OriginalParents[id] = rect.parent;
+                if (!OriginalParents.ContainsKey(id))
+                {
+                    OriginalParents[id] = rect.parent;
+                    OriginalPositions[id] = rect.anchoredPosition;
+                }
                 int slotIndex = InventoryLayout.SlotIndex(element.Position, grid.GetInventory().GetWidth());
                 TMP_Text label = GetOrCreateLabel(element);
                 if (slotIndex < 0 || !DadsEPIPlugin.SeparateEquipmentPanel.Value)
@@ -46,7 +58,7 @@ namespace DadsEPI
                     if (OriginalParents.TryGetValue(id, out Transform original) && rect.parent != original)
                     {
                         rect.SetParent(original, false);
-                        rect.anchoredPosition = new Vector2(element.Position.x * grid.m_elementSpace, -element.Position.y * grid.m_elementSpace);
+                        if (OriginalPositions.TryGetValue(id, out Vector2 originalPosition)) rect.anchoredPosition = originalPosition;
                     }
                     label.gameObject.SetActive(slotIndex >= 0);
                     if (slotIndex >= 0) label.text = InventoryLayout.Slots[slotIndex].Label;
@@ -60,29 +72,36 @@ namespace DadsEPI
                 rect.anchoredPosition = PanelPosition(slotIndex, grid.m_elementSpace);
                 label.text = InventoryLayout.Slots[slotIndex].Label;
                 label.gameObject.SetActive(true);
+                label.transform.SetAsLastSibling();
             }
-            if (_panel != null) _panel.gameObject.SetActive(DadsEPIPlugin.SeparateEquipmentPanel.Value && InventoryLayout.Slots.Count > 0);
+            if (_panel != null)
+            {
+                UpdatePanelLayout(grid);
+                _panel.gameObject.SetActive(DadsEPIPlugin.SeparateEquipmentPanel.Value && InventoryLayout.Slots.Count > 0);
+            }
         }
 
         private static Vector2 PanelPosition(int slotIndex, float space)
         {
             if (slotIndex < InventoryLayout.EquipmentSlotCount)
             {
-                int column = slotIndex / 4;
-                int row = slotIndex % 4;
+                int column = slotIndex % EquipmentColumns;
+                int row = slotIndex / EquipmentColumns;
                 return new Vector2(10f + column * space, -10f - row * space);
             }
             int quick = slotIndex - InventoryLayout.EquipmentSlotCount;
-            int perRow = Mathf.Min(4, Mathf.Max(1, InventoryLayout.EnabledQuickSlots));
+            int perRow = Mathf.Min(EquipmentColumns, Mathf.Max(1, InventoryLayout.EnabledQuickSlots));
             int rowIndex = quick / perRow;
             int columnIndex = quick % perRow;
-            return new Vector2(10f + columnIndex * space, -10f - 4.35f * space - rowIndex * space);
+            int equipmentRows = Mathf.CeilToInt(InventoryLayout.EquipmentSlotCount / (float)EquipmentColumns);
+            return new Vector2(10f + columnIndex * space, -10f - (equipmentRows + 0.35f) * space - rowIndex * space);
         }
 
         private static void EnsurePanel(InventoryGrid grid)
         {
             if (_panel != null) return;
-            Transform parent = InventoryGui.instance != null ? InventoryGui.instance.m_player : grid.transform.parent;
+            RectTransform playerPanel = InventoryGui.instance != null ? InventoryGui.instance.m_player : null;
+            Transform parent = playerPanel != null && playerPanel.parent != null ? playerPanel.parent : grid.transform.parent;
             Transform existing = parent.Find(PanelName);
             if (existing != null)
             {
@@ -92,15 +111,11 @@ namespace DadsEPI
             GameObject panelObject = new GameObject(PanelName, typeof(RectTransform), typeof(Image));
             panelObject.transform.SetParent(parent, false);
             _panel = panelObject.GetComponent<RectTransform>();
-            _panel.anchorMin = new Vector2(0f, 1f);
-            _panel.anchorMax = new Vector2(0f, 1f);
-            _panel.pivot = new Vector2(1f, 1f);
-            _panel.anchoredPosition = new Vector2(-12f, -12f);
-            int columns = Mathf.Max(2, Mathf.Min(4, InventoryLayout.EnabledQuickSlots));
-            int quickRows = Mathf.CeilToInt(InventoryLayout.EnabledQuickSlots / (float)columns);
-            _panel.sizeDelta = new Vector2(Mathf.Max(2, columns) * grid.m_elementSpace + 20f, (4.4f + quickRows) * grid.m_elementSpace + 20f);
+            _panel.anchorMin = playerPanel != null ? playerPanel.anchorMin : new Vector2(0f, 1f);
+            _panel.anchorMax = _panel.anchorMin;
+            _panel.pivot = new Vector2(0f, 1f);
             Image panelImage = panelObject.GetComponent<Image>();
-            Image sourceImage = parent.GetComponent<Image>();
+            Image sourceImage = playerPanel != null ? playerPanel.GetComponent<Image>() : parent.GetComponent<Image>();
             if (sourceImage != null)
             {
                 panelImage.sprite = sourceImage.sprite;
@@ -109,7 +124,28 @@ namespace DadsEPI
             }
             panelImage.color = new Color(0.12f, 0.09f, 0.07f, 0.94f);
             panelImage.raycastTarget = false;
-            _panel.SetAsFirstSibling();
+            _panel.SetAsLastSibling();
+            UpdatePanelLayout(grid);
+        }
+
+        private static void UpdatePanelLayout(InventoryGrid grid)
+        {
+            if (_panel == null) return;
+            RectTransform playerPanel = InventoryGui.instance != null ? InventoryGui.instance.m_player : null;
+            if (playerPanel != null)
+            {
+                _panel.anchorMin = playerPanel.anchorMin;
+                _panel.anchorMax = playerPanel.anchorMin;
+                _panel.anchoredPosition = playerPanel.anchoredPosition + new Vector2(
+                    playerPanel.rect.width * (1f - playerPanel.pivot.x) + 12f,
+                    playerPanel.rect.height * (1f - playerPanel.pivot.y));
+            }
+            int equipmentRows = Mathf.CeilToInt(InventoryLayout.EquipmentSlotCount / (float)EquipmentColumns);
+            int quickColumns = Mathf.Min(EquipmentColumns, Mathf.Max(1, InventoryLayout.EnabledQuickSlots));
+            int quickRows = Mathf.CeilToInt(InventoryLayout.EnabledQuickSlots / (float)quickColumns);
+            int columns = Mathf.Max(EquipmentColumns, quickColumns);
+            float rows = equipmentRows + (quickRows > 0 ? 0.35f + quickRows : 0f);
+            _panel.sizeDelta = new Vector2(columns * grid.m_elementSpace + 20f, rows * grid.m_elementSpace + 20f);
         }
 
         private static TMP_Text GetOrCreateLabel(InventoryElement element)
