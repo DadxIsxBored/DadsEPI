@@ -10,7 +10,8 @@ DadsEPI is an independently implemented extended player inventory for Valheim 1.
 - Toggleable built-in special slots, including Utility.
 - Ten custom slot pairs with a visible name and comma-separated exact in-game prefab names.
 - Native Valheim character-inventory serialization.
-- Reserved slots excluded from automatic pickup placement.
+- Automatic routing and equipping of newly acquired accepted equipment when its matching dedicated slot is empty.
+- Occupied dedicated slots remain unchanged during automatic pickup placement.
 - Container and crafting compatibility through the standard `Inventory` API.
 
 ## Default controls
@@ -29,6 +30,6 @@ Install through a Thunderstore-compatible mod manager. For manual installation, 
 
 DadsEPI is a client-side inventory owner. Do not run it alongside AzuExtendedPlayerInventory, EquipmentAndQuickSlots, or another mod that changes player inventory dimensions or owns equipment slots.
 
-This prerelease targets Valheim 1.0.12 and BepInEx 5.4.2350. Back up the character before testing inventory-layout prereleases.
+Version 1.0.0 targets Valheim 1.0.12 and BepInEx 5.4.2350. Back up the character before changing inventory-owner mods.
 
 Source: [GitHub](https://github.com/DadxIsxBored/DadsEPI)

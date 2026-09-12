@@ -20,6 +20,7 @@ namespace DadsEPI
         internal static readonly List<DedicatedSlot> Slots = new List<DedicatedSlot>();
         internal static int VanillaRows { get; private set; } = BaseVanillaRows;
         private static bool _normalizing;
+        private static ItemDrop.ItemData _pendingAutoItem;
 
         internal static int NormalRows => Mathf.Clamp(VanillaRows, BaseVanillaRows, MaximumVanillaRows) + Mathf.Clamp(DadsEPIPlugin.ExtraRows.Value, 0, 5);
         internal static int EquipmentSlotCount => Slots.Count(slot => !slot.Quick);
@@ -129,6 +130,32 @@ namespace DadsEPI
             return new Vector2i(-1, -1);
         }
 
+        internal static void BeginAutoAdd(Inventory inventory, ItemDrop.ItemData item)
+        {
+            _pendingAutoItem = DadsEPIPlugin.ModEnabled?.Value == true && DadsEPIPlugin.AutoEquip?.Value == true && IsPlayerInventory(inventory)
+                ? item
+                : null;
+        }
+
+        internal static void EndAutoAdd()
+        {
+            _pendingAutoItem = null;
+        }
+
+        internal static Vector2i FindPreferredEmpty(Inventory inventory, bool topFirst)
+        {
+            if (_pendingAutoItem != null)
+            {
+                int slot = FindEquipmentSlot(_pendingAutoItem);
+                if (slot >= 0)
+                {
+                    Vector2i destination = SlotPosition(slot, inventory.GetWidth());
+                    if (inventory.GetItemAt(destination.x, destination.y) == null) return destination;
+                }
+            }
+            return FindGeneralEmpty(inventory, topFirst);
+        }
+
         internal static int CountGeneralEmpty(Inventory inventory)
         {
             int count = 0;
@@ -150,6 +177,22 @@ namespace DadsEPI
             if (_normalizing || player == null || item == null) return;
             int slot = FindEquipmentSlot(item);
             if (slot >= 0) MoveItem(player, player.GetInventory(), item, SlotPosition(slot, player.GetInventory().GetWidth()));
+        }
+
+        internal static void AutoPlaceNewItem(Player player, Inventory inventory, ItemDrop.ItemData item)
+        {
+            if (_normalizing || player == null || inventory == null || item == null || DadsEPIPlugin.AutoEquip?.Value != true) return;
+            if (!ReferenceEquals(inventory, player.GetInventory())) return;
+            int slot = FindEquipmentSlot(item);
+            if (slot < 0) return;
+            Vector2i destination = SlotPosition(slot, inventory.GetWidth());
+            if (inventory.GetItemAt(destination.x, destination.y) != null) return;
+            ItemDrop.ItemData storedItem = inventory.GetAllItems().Contains(item)
+                ? item
+                : inventory.GetAllItems().FirstOrDefault(candidate => Slots[slot].Accepts(candidate) && string.Equals(PrefabName(candidate), PrefabName(item), StringComparison.Ordinal));
+            if (storedItem == null) return;
+            MoveItem(player, inventory, storedItem, destination);
+            player.EquipItem(storedItem);
         }
 
         internal static int FindEquipmentSlot(ItemDrop.ItemData item)

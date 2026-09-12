@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0
+
+- Published the first stable DadsEPI release for Valheim 1.0.12.
+- Includes the separate labeled equipment grid, configurable accepted-prefab lists, optional equipment compartments, configurable quick slots, movement-compatible quick-slot hotkeys, and native-sized inventory defaults developed through versions 0.1.0 through 0.3.2.
+- Automatically routes newly acquired accepted equipment into its matching empty dedicated slot and equips it when the Auto-Equip setting is enabled; occupied dedicated slots are left unchanged.
+
 ## 0.3.2
 
 - Changed quick-slot shortcut detection so held movement, sprint, crouch, and other unrelated keys do not block activation.

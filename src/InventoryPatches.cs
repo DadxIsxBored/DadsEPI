@@ -45,7 +45,7 @@ namespace DadsEPI
         private static bool Prefix(Inventory __instance, bool __0, ref Vector2i __result)
         {
             if (DadsEPIPlugin.ModEnabled?.Value != true || !InventoryLayout.IsPlayerInventory(__instance)) return true;
-            __result = InventoryLayout.FindGeneralEmpty(__instance, __0);
+            __result = InventoryLayout.FindPreferredEmpty(__instance, __0);
             return false;
         }
     }
@@ -67,6 +67,28 @@ namespace DadsEPI
         {
             if (DadsEPIPlugin.ModEnabled?.Value == true && InventoryLayout.IsPlayerInventory(__instance))
                 __result = InventoryLayout.CountGeneralEmpty(__instance) > 0;
+        }
+    }
+
+    [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), new[] { typeof(ItemDrop.ItemData) })]
+    internal static class AddItemAutoEquipmentPatch
+    {
+        private static void Prefix(Inventory __instance, ItemDrop.ItemData item)
+        {
+            InventoryLayout.BeginAutoAdd(__instance, item);
+        }
+
+        private static void Postfix(Inventory __instance, ItemDrop.ItemData item, bool __result)
+        {
+            InventoryLayout.EndAutoAdd();
+            if (!__result || DadsEPIPlugin.ModEnabled?.Value != true || Player.m_localPlayer == null) return;
+            InventoryLayout.AutoPlaceNewItem(Player.m_localPlayer, __instance, item);
+        }
+
+        private static Exception Finalizer(Exception __exception)
+        {
+            InventoryLayout.EndAutoAdd();
+            return __exception;
         }
     }
 
