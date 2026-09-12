@@ -1,10 +1,5 @@
 # Changelog
 
-## 1.0.1
-
-- Reduced the in-game quick-slot HUD label size to 11 pixels.
-- Disabled quick-slot label wrapping and widened the label bounds so shortcut text remains horizontal.
-
 ## 1.0.0
 
 - Published the first stable DadsEPI release for Valheim 1.0.12.

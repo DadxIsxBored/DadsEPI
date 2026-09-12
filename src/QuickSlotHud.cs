@@ -111,7 +111,22 @@ namespace DadsEPI
             if (bindingTransform != null)
             {
                 TMP_Text binding = bindingTransform.GetComponent<TMP_Text>();
-                if (binding != null) binding.text = InventoryLayout.Slots[InventoryLayout.EquipmentSlotCount + index].Label;
+                if (binding != null)
+                {
+                    binding.text = InventoryLayout.Slots[InventoryLayout.EquipmentSlotCount + index].Label;
+                    binding.enableAutoSizing = false;
+                    binding.textWrappingMode = TextWrappingModes.NoWrap;
+                    binding.overflowMode = TextOverflowModes.Overflow;
+                    binding.fontSize = 11f;
+                    binding.alignment = TextAlignmentOptions.Center;
+
+                    RectTransform bindingRect = binding.rectTransform;
+                    bindingRect.anchorMin = new Vector2(0f, 1f);
+                    bindingRect.anchorMax = new Vector2(1f, 1f);
+                    bindingRect.pivot = new Vector2(0.5f, 1f);
+                    bindingRect.offsetMin = new Vector2(2f, -18f);
+                    bindingRect.offsetMax = new Vector2(-2f, -2f);
+                }
             }
             foreach (string child in new[] { "equiped", "queued", "selected" })
             {

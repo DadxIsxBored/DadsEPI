@@ -13,7 +13,7 @@ namespace DadsEPI
     {
         public const string PluginGuid = "com.dadisbored.dadsepi";
         public const string PluginName = "DadsEPI";
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "1.0.1";
 
         internal static ConfigEntry<bool> ModEnabled;
         internal static ConfigEntry<int> ExtraRows;

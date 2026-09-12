@@ -50,15 +50,23 @@ if ($Package) {
         throw "DLL version $assemblyVersion does not match manifest version $($manifest.version_number)."
     }
 
-    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $dist = Join-Path $projectRoot "dist\DadsEPI-$($manifest.version_number)-$stamp"
-    $zipPath = "$dist.zip"
-    if (Test-Path -LiteralPath $dist) {
-        throw "Package staging directory already exists: $dist"
+    $distRoot = Join-Path $projectRoot 'dist'
+    $archiveRoot = Join-Path $projectRoot 'Archive\package-builds'
+    New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $archiveRoot -Force | Out-Null
+    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
+    foreach ($artifact in Get-ChildItem -LiteralPath $distRoot -Force) {
+        $archiveName = if ($artifact.PSIsContainer) {
+            "$($artifact.Name)-$stamp"
+        }
+        else {
+            "$($artifact.BaseName)-$stamp$($artifact.Extension)"
+        }
+        Move-Item -LiteralPath $artifact.FullName -Destination (Join-Path $archiveRoot $archiveName)
     }
-    if (Test-Path -LiteralPath $zipPath) {
-        throw "Package archive already exists: $zipPath"
-    }
+
+    $dist = Join-Path $distRoot "DadsEPI-$($manifest.version_number)"
+    $zipPath = Join-Path $distRoot "DadsEPI-$($manifest.version_number).zip"
     New-Item -ItemType Directory -Path $dist | Out-Null
     Copy-Item -LiteralPath $dllPath -Destination $dist
     Copy-Item -LiteralPath $manifestPath -Destination $dist
