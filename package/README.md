@@ -30,6 +30,6 @@ Install through a Thunderstore-compatible mod manager. For manual installation, 
 
 DadsEPI is a client-side inventory owner. Do not run it alongside AzuExtendedPlayerInventory, EquipmentAndQuickSlots, or another mod that changes player inventory dimensions or owns equipment slots.
 
-Version 1.0.0 targets Valheim 1.0.12 and BepInEx 5.4.2350. Back up the character before changing inventory-owner mods.
+Version 1.0.2 targets Valheim 1.0.12 and BepInEx 5.4.2350. Back up the character before changing inventory-owner mods.
 
 Source: [GitHub](https://github.com/DadxIsxBored/DadsEPI)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Rebuilt against BepInEx `5.4.23.5` from BepInExPack Valheim `5.4.2350`.
+
 ## 1.0.1
 
 - Reduced the in-game quick-slot HUD label size to 11 pixels.
