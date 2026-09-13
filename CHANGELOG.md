@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- Moved top-left item pickup messages below the visible quick-slot HUD.
+- Removed durability bars from the quick-slot HUD while retaining item stack counts.
+- Moved the separate equipment panel beyond the inventory weight and armor displays.
+
 ## 1.0.2
 
 - Rebuilt against BepInEx `5.4.23.5` from BepInExPack Valheim `5.4.2350`.

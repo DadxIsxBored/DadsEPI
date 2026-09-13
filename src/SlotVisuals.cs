@@ -150,9 +150,14 @@ namespace DadsEPI
             {
                 _panel.anchorMin = playerPanel.anchorMin;
                 _panel.anchorMax = playerPanel.anchorMin;
-                _panel.anchoredPosition = playerPanel.anchoredPosition + new Vector2(
-                    playerPanel.rect.width * (1f - playerPanel.pivot.x) + 12f,
-                    playerPanel.rect.height * (1f - playerPanel.pivot.y));
+                var corners = new Vector3[4];
+                playerPanel.GetWorldCorners(corners);
+                float rightEdge = Mathf.Max(corners[2].x, corners[3].x);
+                float topEdge = Mathf.Max(corners[1].y, corners[2].y);
+                IncludeRightEdge(InventoryGui.instance.m_weight != null ? InventoryGui.instance.m_weight.rectTransform : null, playerPanel, ref rightEdge);
+                IncludeRightEdge(InventoryGui.instance.m_armor != null ? InventoryGui.instance.m_armor.rectTransform : null, playerPanel, ref rightEdge);
+                float gap = Mathf.Abs(playerPanel.TransformVector(new Vector3(12f, 0f, 0f)).x);
+                _panel.position = new Vector3(rightEdge + gap, topEdge, playerPanel.position.z);
             }
             int equipmentRows = Mathf.CeilToInt(InventoryLayout.EquipmentSlotCount / (float)EquipmentColumns);
             int quickColumns = Mathf.Min(EquipmentColumns, Mathf.Max(1, InventoryLayout.EnabledQuickSlots));
@@ -160,6 +165,19 @@ namespace DadsEPI
             int columns = Mathf.Max(EquipmentColumns, quickColumns);
             float rows = equipmentRows + (quickRows > 0 ? 0.35f + quickRows : 0f);
             _panel.sizeDelta = new Vector2(columns * grid.m_elementSpace + 20f, rows * grid.m_elementSpace + 20f);
+        }
+
+        private static void IncludeRightEdge(RectTransform rect, RectTransform playerPanel, ref float rightEdge)
+        {
+            if (rect == null) return;
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            rightEdge = Mathf.Max(rightEdge, Mathf.Max(corners[2].x, corners[3].x));
+
+            RectTransform parent = rect.parent as RectTransform;
+            if (parent == null || parent == playerPanel || parent == _panel.parent) return;
+            parent.GetWorldCorners(corners);
+            rightEdge = Mathf.Max(rightEdge, Mathf.Max(corners[2].x, corners[3].x));
         }
 
         private static TMP_Text GetOrCreateLabel(InventoryElement element)

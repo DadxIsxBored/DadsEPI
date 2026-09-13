@@ -12,9 +12,14 @@ namespace DadsEPI
         private static readonly List<GameObject> Elements = new List<GameObject>();
         private static Vector3 _lastMouse;
         private static bool _dragging;
+        private static RectTransform _messageTextRect;
+        private static RectTransform _messageIconRect;
+        private static Vector2 _messageTextPosition;
+        private static Vector2 _messageIconPosition;
 
         internal static void Reset()
         {
+            RestorePickupMessagePosition();
             if (_root != null) Object.Destroy(_root.gameObject);
             _root = null;
             Elements.Clear();
@@ -28,7 +33,11 @@ namespace DadsEPI
             if (_root == null) return;
             bool visible = DadsEPIPlugin.ShowQuickSlots.Value && InventoryLayout.EnabledQuickSlots > 0;
             _root.gameObject.SetActive(visible);
-            if (!visible) return;
+            if (!visible)
+            {
+                PositionPickupMessage(false);
+                return;
+            }
 
             int count = VisibleSlotCount();
             EnsureElementCount(hud, count);
@@ -52,6 +61,8 @@ namespace DadsEPI
             _root.localScale = Vector3.one * Mathf.Clamp(DadsEPIPlugin.HudScale.Value, 0.25f, 3f);
             _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
             UpdateDrag();
+            _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
+            PositionPickupMessage(count > 0);
         }
 
         private static int VisibleSlotCount()
@@ -133,6 +144,66 @@ namespace DadsEPI
                 Transform transform = element.transform.Find(child);
                 if (transform != null) transform.gameObject.SetActive(false);
             }
+            foreach (GuiBar durability in element.GetComponentsInChildren<GuiBar>(true))
+                durability.gameObject.SetActive(false);
+        }
+
+        private static void PositionPickupMessage(bool belowSlots)
+        {
+            MessageHud messageHud = MessageHud.instance;
+            RectTransform textRect = messageHud != null && messageHud.m_messageText != null ? messageHud.m_messageText.rectTransform : null;
+            RectTransform iconRect = messageHud != null && messageHud.m_messageIcon != null ? messageHud.m_messageIcon.rectTransform : null;
+            CapturePickupMessagePosition(textRect, iconRect);
+            RestorePickupMessagePosition();
+            if (!belowSlots || _root == null) return;
+
+            float quickSlotBottom = WorldEdge(_root, false);
+            float messageTop = Mathf.Max(WorldEdge(_messageTextRect, true), WorldEdge(_messageIconRect, true));
+            float gap = Mathf.Abs(_root.TransformVector(new Vector3(0f, 10f, 0f)).y);
+            float worldOffset = quickSlotBottom - gap - messageTop;
+            if (worldOffset >= 0f) return;
+
+            MoveVertically(_messageTextRect, _messageTextPosition, worldOffset);
+            if (_messageIconRect != null && (_messageTextRect == null || !_messageIconRect.IsChildOf(_messageTextRect)))
+                MoveVertically(_messageIconRect, _messageIconPosition, worldOffset);
+        }
+
+        private static void CapturePickupMessagePosition(RectTransform textRect, RectTransform iconRect)
+        {
+            if (_messageTextRect != textRect)
+            {
+                _messageTextRect = textRect;
+                if (_messageTextRect != null) _messageTextPosition = _messageTextRect.anchoredPosition;
+            }
+            if (_messageIconRect != iconRect)
+            {
+                _messageIconRect = iconRect;
+                if (_messageIconRect != null) _messageIconPosition = _messageIconRect.anchoredPosition;
+            }
+        }
+
+        private static void RestorePickupMessagePosition()
+        {
+            if (_messageTextRect != null) _messageTextRect.anchoredPosition = _messageTextPosition;
+            if (_messageIconRect != null) _messageIconRect.anchoredPosition = _messageIconPosition;
+        }
+
+        private static float WorldEdge(RectTransform rect, bool top)
+        {
+            if (rect == null) return top ? float.NegativeInfinity : float.PositiveInfinity;
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            float edge = corners[0].y;
+            for (int index = 1; index < corners.Length; index++)
+                edge = top ? Mathf.Max(edge, corners[index].y) : Mathf.Min(edge, corners[index].y);
+            return edge;
+        }
+
+        private static void MoveVertically(RectTransform rect, Vector2 originalPosition, float worldOffset)
+        {
+            if (rect == null || rect.parent == null) return;
+            float localOffset = rect.parent.InverseTransformVector(new Vector3(0f, worldOffset, 0f)).y;
+            rect.anchoredPosition = originalPosition + new Vector2(0f, localOffset);
         }
 
         private static void UpdateDrag()
