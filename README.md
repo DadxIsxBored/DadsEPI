@@ -11,8 +11,9 @@ DadsEPI is a clean-room extended inventory implementation for Valheim. It is bui
 - Every built-in special slot can be toggled, including Utility.
 - Ten custom slot pairs accept a visible slot name and comma-separated exact in-game prefab names.
 - Quick slots support zero through eight entries, individual hotkeys, HUD labels, HUD scaling, row layout, and drag positioning.
-- Newly acquired accepted equipment automatically enters and equips from its matching dedicated slot when that slot is empty and `Auto-Equip Items` is enabled.
-- Occupied dedicated slots are never displaced by automatic pickup placement.
+- Newly acquired and upgraded accepted equipment automatically enters and equips from its matching dedicated slot when `Auto-Equip Items` is enabled.
+- An accepted item already occupying its dedicated slot is equipped automatically; occupied slots are never displaced by pickup placement.
+- Multiple utility items can remain equipped and active together when they occupy separate accepted equipment slots, including Wishbone and Wisplight/Demister.
 - Equipment placement is type checked.
 - Quick-slot input is isolated from movement controls and blocked while text, menu, map, console, or inventory input is active.
 

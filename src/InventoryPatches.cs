@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection.Emit;
 using HarmonyLib;
 
 namespace DadsEPI
@@ -20,6 +22,21 @@ namespace DadsEPI
     internal static class PlayerSpawnedPatch
     {
         private static void Postfix(Player __instance) => InventoryLayout.Apply(__instance, true);
+    }
+
+    [HarmonyPatch(typeof(Player), "EquipInventoryItems")]
+    internal static class EquipInventoryItemsPatch
+    {
+        private static void Prefix()
+        {
+            UtilityEquipment.BeginInventoryRestore();
+        }
+
+        private static Exception Finalizer(Exception __exception)
+        {
+            UtilityEquipment.EndInventoryRestore();
+            return __exception;
+        }
     }
 
     [HarmonyPatch(typeof(Player), nameof(Player.SetInventorySize))]
@@ -125,10 +142,91 @@ namespace DadsEPI
     [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.EquipItem), new[] { typeof(ItemDrop.ItemData), typeof(bool) })]
     internal static class EquipItemPatch
     {
-        private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, bool __result)
+        private static void Prefix(Humanoid __instance, ItemDrop.ItemData item, out ItemDrop.ItemData __state)
         {
+            __state = UtilityEquipment.BeginEquip(__instance, item);
+        }
+
+        private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, bool __result, ItemDrop.ItemData __state)
+        {
+            UtilityEquipment.EndEquip(__instance, __state, __result);
             if (__result && DadsEPIPlugin.ModEnabled?.Value == true && __instance is Player player && player == Player.m_localPlayer)
                 InventoryLayout.MoveEquippedItemToDedicatedSlot(player, item);
+        }
+
+        private static Exception Finalizer(Exception __exception, Humanoid __instance, ItemDrop.ItemData __state)
+        {
+            if (__exception != null) UtilityEquipment.EndEquip(__instance, __state, false);
+            return __exception;
+        }
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.IsItemEquiped))]
+    internal static class IsItemEquippedPatch
+    {
+        private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, ref bool __result)
+        {
+            if (!__result && UtilityEquipment.IsManagedUtility(__instance, item)) __result = true;
+        }
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.IsItemTypeEquiped))]
+    internal static class IsItemTypeEquippedPatch
+    {
+        private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, ref bool __result)
+        {
+            if (!__result && UtilityEquipment.HasEquippedUtilityType(__instance, item)) __result = true;
+        }
+    }
+
+    [HarmonyPatch(typeof(Humanoid), "UpdateEquipmentStatusEffects")]
+    internal static class EquipmentStatusEffectsPatch
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            var statusEffectsField = AccessTools.Field(typeof(Humanoid), "m_equipmentStatusEffects");
+            var addUtilityEffects = AccessTools.Method(typeof(UtilityEquipment), nameof(UtilityEquipment.AddStatusEffects));
+
+            for (int index = 1; index < codes.Count; index++)
+            {
+                if (codes[index].opcode != OpCodes.Ldfld || !Equals(codes[index].operand, statusEffectsField) || codes[index - 1].opcode != OpCodes.Ldarg_0) continue;
+
+                int insertion = index - 1;
+                var loadHumanoid = new CodeInstruction(OpCodes.Ldarg_0);
+                loadHumanoid.labels.AddRange(codes[insertion].labels);
+                loadHumanoid.blocks.AddRange(codes[insertion].blocks);
+                codes[insertion].labels.Clear();
+                codes[insertion].blocks.Clear();
+                codes.InsertRange(insertion, new[]
+                {
+                    loadHumanoid,
+                    new CodeInstruction(OpCodes.Ldloc_0),
+                    new CodeInstruction(OpCodes.Call, addUtilityEffects)
+                });
+                return codes;
+            }
+
+            DadsEPIPlugin.ModLogger?.LogError("Could not patch utility status-effect collection.");
+            return codes;
+        }
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipAllItems))]
+    internal static class UnequipAllItemsPatch
+    {
+        private static void Postfix(Humanoid __instance)
+        {
+            UtilityEquipment.UnequipAdditionalUtilities(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(InventoryGui), "DoCrafting")]
+    internal static class CraftingAutoEquipPatch
+    {
+        private static void Postfix(Player __0)
+        {
+            InventoryLayout.AutoEquipDedicatedItems(__0);
         }
     }
 

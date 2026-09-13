@@ -110,6 +110,22 @@ namespace DadsEPI
 
         internal static bool IsReserved(Vector2i position, int width) => SlotIndex(position, width) >= 0;
 
+        internal static bool IsInEquipmentSlot(Inventory inventory, ItemDrop.ItemData item)
+        {
+            if (inventory == null || item == null) return false;
+            int slot = SlotIndex(item.m_gridPos, inventory.GetWidth());
+            if (slot < 0 || slot >= EquipmentSlotCount || !Slots[slot].Accepts(item)) return false;
+            return ReferenceEquals(inventory.GetItemAt(item.m_gridPos.x, item.m_gridPos.y), item);
+        }
+
+        internal static bool UsesSeparateEquipmentSlot(Inventory inventory, ItemDrop.ItemData item, ItemDrop.ItemData equippedItem)
+        {
+            if (inventory == null || item == null || equippedItem == null) return false;
+            int destinationSlot = FindEquipmentSlot(item);
+            int equippedSlot = SlotIndex(equippedItem.m_gridPos, inventory.GetWidth());
+            return destinationSlot >= 0 && equippedSlot >= 0 && equippedSlot < EquipmentSlotCount && destinationSlot != equippedSlot;
+        }
+
         internal static bool CanPlace(ItemDrop.ItemData item, Vector2i position, int width)
         {
             int index = SlotIndex(position, width);
@@ -186,13 +202,32 @@ namespace DadsEPI
             int slot = FindEquipmentSlot(item);
             if (slot < 0) return;
             Vector2i destination = SlotPosition(slot, inventory.GetWidth());
-            if (inventory.GetItemAt(destination.x, destination.y) != null) return;
+            ItemDrop.ItemData occupant = inventory.GetItemAt(destination.x, destination.y);
+            if (occupant != null)
+            {
+                if (Slots[slot].Accepts(occupant) && !occupant.m_equipped) player.EquipItem(occupant);
+                return;
+            }
             ItemDrop.ItemData storedItem = inventory.GetAllItems().Contains(item)
                 ? item
                 : inventory.GetAllItems().FirstOrDefault(candidate => Slots[slot].Accepts(candidate) && string.Equals(PrefabName(candidate), PrefabName(item), StringComparison.Ordinal));
             if (storedItem == null) return;
             MoveItem(player, inventory, storedItem, destination);
-            player.EquipItem(storedItem);
+            if (!storedItem.m_equipped) player.EquipItem(storedItem);
+        }
+
+        internal static void AutoEquipDedicatedItems(Player player)
+        {
+            if (_normalizing || player == null || DadsEPIPlugin.ModEnabled?.Value != true || DadsEPIPlugin.AutoEquip?.Value != true) return;
+            Inventory inventory = player.GetInventory();
+            if (inventory == null) return;
+
+            for (int slot = 0; slot < EquipmentSlotCount; slot++)
+            {
+                Vector2i position = SlotPosition(slot, inventory.GetWidth());
+                ItemDrop.ItemData item = inventory.GetItemAt(position.x, position.y);
+                if (item != null && Slots[slot].Accepts(item) && !item.m_equipped) player.EquipItem(item);
+            }
         }
 
         internal static int FindEquipmentSlot(ItemDrop.ItemData item)
@@ -218,6 +253,16 @@ namespace DadsEPI
                     if (item.m_gridPos.y < NormalRows || CanPlace(item, item.m_gridPos, inventory.GetWidth())) continue;
                     Vector2i empty = FindGeneralEmpty(inventory, true);
                     if (empty.x >= 0) MoveItem(player, inventory, item, empty);
+                }
+
+                if (DadsEPIPlugin.AutoEquip?.Value == true)
+                {
+                    for (int slot = 0; slot < EquipmentSlotCount; slot++)
+                    {
+                        Vector2i position = SlotPosition(slot, inventory.GetWidth());
+                        ItemDrop.ItemData item = inventory.GetItemAt(position.x, position.y);
+                        if (item != null && Slots[slot].Accepts(item) && !item.m_equipped) player.EquipItem(item);
+                    }
                 }
             }
             finally { _normalizing = false; }

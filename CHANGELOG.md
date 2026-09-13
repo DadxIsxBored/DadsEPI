@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+- Auto-equipped accepted gear after pickup when its dedicated slot was empty or already occupied by that item.
+- Re-equipped upgraded gear returned to its dedicated slot by Valheim's crafting process.
+- Allowed multiple utility items in separate accepted equipment slots to remain equipped simultaneously.
+- Applied every equipped utility status effect so Wishbone and Wisplight/Demister can operate together.
+- Preserved multiple utility equipment state across inventory normalization, character loading, and unequip-all operations.
+
 ## 1.1.0
 
 - Moved top-left item pickup messages below the visible quick-slot HUD.
