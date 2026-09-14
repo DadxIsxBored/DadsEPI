@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- Prevented equipment-slot layout movement from firing inventory callbacks during Valheim's character-load equipment restore.
+- Isolated load-time equipment restoration per item so an invalid equipment record is left unequipped instead of aborting player spawn.
+
 ## 1.2.0
 
 - Auto-equipped accepted gear after pickup when its dedicated slot was empty or already occupied by that item.

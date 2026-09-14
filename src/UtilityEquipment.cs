@@ -9,6 +9,8 @@ namespace DadsEPI
             AccessTools.FieldRefAccess<Humanoid, ItemDrop.ItemData>("m_utilityItem");
         private static bool _restoringInventoryEquipment;
 
+        internal static bool IsRestoringInventoryEquipment => _restoringInventoryEquipment;
+
         internal static void BeginInventoryRestore()
         {
             _restoringInventoryEquipment = true;

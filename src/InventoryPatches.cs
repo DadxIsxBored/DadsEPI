@@ -27,9 +27,35 @@ namespace DadsEPI
     [HarmonyPatch(typeof(Player), "EquipInventoryItems")]
     internal static class EquipInventoryItemsPatch
     {
-        private static void Prefix()
+        private static bool Prefix(Player __instance)
         {
             UtilityEquipment.BeginInventoryRestore();
+            Inventory inventory = __instance?.GetInventory();
+            if (inventory == null) return false;
+
+            foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(inventory.GetAllItems()))
+            {
+                if (item == null || !item.m_equipped) continue;
+                if (item.m_shared == null)
+                {
+                    item.m_equipped = false;
+                    DadsEPIPlugin.ModLogger?.LogWarning("Skipped an equipped inventory record with no shared item data while loading the character.");
+                    continue;
+                }
+
+                try
+                {
+                    if (!__instance.EquipItem(item, false)) item.m_equipped = false;
+                }
+                catch (Exception exception)
+                {
+                    item.m_equipped = false;
+                    string itemName = !string.IsNullOrEmpty(item.m_shared.m_name) ? item.m_shared.m_name : "unknown item";
+                    DadsEPIPlugin.ModLogger?.LogError($"Could not restore equipped item '{itemName}'; it was left in the inventory unequipped. {exception.GetType().Name}: {exception.Message}");
+                }
+            }
+
+            return false;
         }
 
         private static Exception Finalizer(Exception __exception)
@@ -150,7 +176,7 @@ namespace DadsEPI
         private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, bool __result, ItemDrop.ItemData __state)
         {
             UtilityEquipment.EndEquip(__instance, __state, __result);
-            if (__result && DadsEPIPlugin.ModEnabled?.Value == true && __instance is Player player && player == Player.m_localPlayer)
+            if (__result && !UtilityEquipment.IsRestoringInventoryEquipment && DadsEPIPlugin.ModEnabled?.Value == true && __instance is Player player && player == Player.m_localPlayer)
                 InventoryLayout.MoveEquippedItemToDedicatedSlot(player, item);
         }
 
