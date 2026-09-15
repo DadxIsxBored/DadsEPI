@@ -248,6 +248,18 @@ namespace DadsEPI
                     int slot = FindEquipmentSlot(item);
                     if (slot >= 0) MoveItem(player, inventory, item, SlotPosition(slot, inventory.GetWidth()));
                 }
+
+                for (int slot = 0; slot < EquipmentSlotCount; slot++)
+                {
+                    Vector2i destination = SlotPosition(slot, inventory.GetWidth());
+                    if (inventory.GetItemAt(destination.x, destination.y) != null) continue;
+                    ItemDrop.ItemData acceptedItem = inventory.GetAllItems().FirstOrDefault(item =>
+                        item != null &&
+                        SlotIndex(item.m_gridPos, inventory.GetWidth()) < 0 &&
+                        Slots[slot].Accepts(item));
+                    if (acceptedItem != null) MoveItem(player, inventory, acceptedItem, destination);
+                }
+
                 foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(inventory.GetAllItems()))
                 {
                     if (item.m_gridPos.y < NormalRows || CanPlace(item, item.m_gridPos, inventory.GetWidth())) continue;

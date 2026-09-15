@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Replaced the separate equipment panel's black fill with Valheim's native inventory background sprite, material, tint, and image settings.
+- Added a compact custom-slot editor through DadsBepInExModManager that lists available slots and uses one name field, one prefab-list field, and an Add Slot button.
+- Routed accepted items from ordinary inventory into empty dedicated slots during layout normalization, including Wishbone, Wisplight/Demister, Crypt Key, and configured custom-slot items.
+
 ## 1.2.1
 
 - Prevented equipment-slot layout movement from firing inventory callbacks during Valheim's character-load equipment restore.

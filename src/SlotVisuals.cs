@@ -129,17 +129,39 @@ namespace DadsEPI
             _panel.anchorMax = _panel.anchorMin;
             _panel.pivot = new Vector2(0f, 1f);
             Image panelImage = panelObject.GetComponent<Image>();
-            Image sourceImage = playerPanel != null ? playerPanel.GetComponent<Image>() : parent.GetComponent<Image>();
+            Image sourceImage = FindNativePanelImage(playerPanel);
             if (sourceImage != null)
             {
                 panelImage.sprite = sourceImage.sprite;
+                panelImage.overrideSprite = sourceImage.overrideSprite;
                 panelImage.type = sourceImage.type;
                 panelImage.material = sourceImage.material;
+                panelImage.color = sourceImage.color;
+                panelImage.fillCenter = sourceImage.fillCenter;
+                panelImage.preserveAspect = sourceImage.preserveAspect;
+                panelImage.pixelsPerUnitMultiplier = sourceImage.pixelsPerUnitMultiplier;
             }
-            panelImage.color = new Color(0.12f, 0.09f, 0.07f, 0.94f);
             panelImage.raycastTarget = false;
             _panel.SetAsLastSibling();
             UpdatePanelLayout(grid);
+        }
+
+        private static Image FindNativePanelImage(RectTransform playerPanel)
+        {
+            if (playerPanel == null) return null;
+
+            Image best = null;
+            float largestArea = -1f;
+            foreach (Image image in playerPanel.GetComponentsInChildren<Image>(true))
+            {
+                if (image == null || image.sprite == null) continue;
+                RectTransform rect = image.rectTransform;
+                float area = Mathf.Abs(rect.rect.width * rect.rect.height);
+                if (area <= largestArea) continue;
+                best = image;
+                largestArea = area;
+            }
+            return best;
         }
 
         private static void UpdatePanelLayout(InventoryGrid grid)
