@@ -51,6 +51,9 @@ namespace DadsEPI
                 element.SetActive(active);
                 if (!active) continue;
                 RectTransform rect = element.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(0f, 1f);
+                rect.pivot = new Vector2(0f, 1f);
                 rect.anchoredPosition = new Vector2((index % perRow) * spacing, -(index / perRow) * spacing);
                 int slotIndex = InventoryLayout.EquipmentSlotCount + index;
                 Vector2i position = InventoryLayout.SlotPosition(slotIndex, inventory.GetWidth());
@@ -62,6 +65,7 @@ namespace DadsEPI
             _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
             UpdateDrag();
             _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
+            ClampToViewport();
             PositionPickupMessage(count > 0);
         }
 
@@ -220,6 +224,21 @@ namespace DadsEPI
             }
             else _dragging = false;
             _lastMouse = mouse;
+        }
+
+        private static void ClampToViewport()
+        {
+            if (_root == null || _root.parent == null) return;
+            var corners = new Vector3[4];
+            _root.GetWorldCorners(corners);
+            float minX = Mathf.Min(corners[0].x, corners[1].x);
+            float maxX = Mathf.Max(corners[2].x, corners[3].x);
+            float minY = Mathf.Min(corners[0].y, corners[3].y);
+            float maxY = Mathf.Max(corners[1].y, corners[2].y);
+            const float margin = 8f;
+            float shiftX = minX < margin ? margin - minX : maxX > Screen.width - margin ? Screen.width - margin - maxX : 0f;
+            float shiftY = minY < margin ? margin - minY : maxY > Screen.height - margin ? Screen.height - margin - maxY : 0f;
+            _root.position += new Vector3(shiftX, shiftY, 0f);
         }
     }
 }

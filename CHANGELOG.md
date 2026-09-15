@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.3
+
+- Removed automatic-pickup capacity handling from DadsEPI; that behavior is owned by DadsQoL.
+
+## 1.3.2
+
+- Kept the quick-slot HUD within the screen viewport and aligned each slot from its top-left corner.
+- Added a tombstone-recovery pass that routes recovered equipment into its dedicated slots and equips it.
+
 ## 1.3.1
 
 - Replaced the separate-slot backdrop with a resized clone of Valheim's native crafting/inventory wood-and-leather background object.

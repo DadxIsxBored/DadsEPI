@@ -135,6 +135,18 @@ namespace DadsEPI
         }
     }
 
+    [HarmonyPatch(typeof(TombStone), "OnTakeAllSuccess")]
+    internal static class TombStoneAutoEquipPatch
+    {
+        private static void Postfix()
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null || DadsEPIPlugin.ModEnabled?.Value != true) return;
+            InventoryLayout.Apply(player, true);
+            InventoryLayout.AutoEquipDedicatedItems(player);
+        }
+    }
+
     [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.DropItem), new[] { typeof(Inventory), typeof(ItemDrop.ItemData), typeof(int), typeof(Vector2i) })]
     internal static class InventoryGridDropPatch
     {
