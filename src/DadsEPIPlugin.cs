@@ -13,7 +13,7 @@ namespace DadsEPI
     {
         public const string PluginGuid = "com.dadisbored.dadsepi";
         public const string PluginName = "DadsEPI";
-        public const string PluginVersion = "1.3.3";
+        public const string PluginVersion = "1.3.4";
 
         internal static ConfigEntry<bool> ModEnabled;
         internal static ConfigEntry<int> ExtraRows;
@@ -133,7 +133,7 @@ namespace DadsEPI
             if (Time.unscaledTime >= _nextLayoutCheck)
             {
                 _nextLayoutCheck = Time.unscaledTime + 0.5f;
-                InventoryLayout.Apply(Player.m_localPlayer, true);
+                InventoryLayout.Apply(Player.m_localPlayer, false);
             }
             if (InputBlocked()) return;
             for (int index = 0; index < InventoryLayout.EnabledQuickSlots; index++)

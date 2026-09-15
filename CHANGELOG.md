@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.4
+
+- Removed equipment normalization and automatic equip calls from the recurring half-second inventory-size check.
+- Limited automatic equip calls to items Valheim identifies as equipable, excluding dedicated storage items such as the Crypt Key.
+- Assigned slot labels an existing Valheim TMP font when the inventory amount label has no font reference.
+
 ## 1.3.3
 
 - Removed automatic-pickup capacity handling from DadsEPI; that behavior is owned by DadsQoL.

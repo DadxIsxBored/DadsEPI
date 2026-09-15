@@ -204,10 +204,13 @@ namespace DadsEPI
             rect.offsetMin = new Vector2(2f, 2f);
             rect.offsetMax = new Vector2(-2f, -2f);
             TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
-            if (element.m_amount != null)
+            TMP_Text fontSource = element.m_amount != null
+                ? element.m_amount
+                : InventoryGui.instance != null ? InventoryGui.instance.GetComponentInChildren<TMP_Text>(true) : null;
+            if (fontSource != null)
             {
-                label.font = element.m_amount.font;
-                label.fontSharedMaterial = element.m_amount.fontSharedMaterial;
+                label.font = fontSource.font;
+                label.fontSharedMaterial = fontSource.fontSharedMaterial;
             }
             label.enabled = true;
             label.alignment = TextAlignmentOptions.Top;

@@ -172,7 +172,7 @@ namespace DadsEPI
             Inventory inventory = __instance.GetInventory();
             if (!InventoryLayout.IsPlayerInventory(inventory)) return;
             int slot = InventoryLayout.SlotIndex(pos, inventory.GetWidth());
-            if (slot >= 0 && slot < InventoryLayout.EquipmentSlotCount && DadsEPIPlugin.AutoEquip.Value)
+            if (slot >= 0 && slot < InventoryLayout.EquipmentSlotCount && DadsEPIPlugin.AutoEquip.Value && item.IsEquipable())
                 Player.m_localPlayer.EquipItem(item);
         }
     }
