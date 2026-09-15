@@ -122,46 +122,36 @@ namespace DadsEPI
                 _panel = existing.GetComponent<RectTransform>();
                 return;
             }
-            GameObject panelObject = new GameObject(PanelName, typeof(RectTransform), typeof(Image));
-            panelObject.transform.SetParent(parent, false);
+            Transform nativeBackground = InventoryGui.instance != null && InventoryGui.instance.m_crafting != null
+                ? InventoryGui.instance.m_crafting.Find("Bkg")
+                : null;
+            if (nativeBackground == null && playerPanel != null)
+                nativeBackground = playerPanel.Find("Bkg");
+
+            GameObject panelObject;
+            if (nativeBackground != null)
+            {
+                panelObject = Object.Instantiate(nativeBackground.gameObject, parent, false);
+                panelObject.name = PanelName;
+                panelObject.SetActive(true);
+            }
+            else
+            {
+                panelObject = new GameObject(PanelName, typeof(RectTransform), typeof(Image));
+                panelObject.transform.SetParent(parent, false);
+            }
             _panel = panelObject.GetComponent<RectTransform>();
             _panel.anchorMin = playerPanel != null ? playerPanel.anchorMin : new Vector2(0f, 1f);
             _panel.anchorMax = _panel.anchorMin;
             _panel.pivot = new Vector2(0f, 1f);
             Image panelImage = panelObject.GetComponent<Image>();
-            Image sourceImage = FindNativePanelImage(playerPanel);
-            if (sourceImage != null)
+            if (panelImage != null)
             {
-                panelImage.sprite = sourceImage.sprite;
-                panelImage.overrideSprite = sourceImage.overrideSprite;
-                panelImage.type = sourceImage.type;
-                panelImage.material = sourceImage.material;
-                panelImage.color = sourceImage.color;
-                panelImage.fillCenter = sourceImage.fillCenter;
-                panelImage.preserveAspect = sourceImage.preserveAspect;
-                panelImage.pixelsPerUnitMultiplier = sourceImage.pixelsPerUnitMultiplier;
+                panelImage.enabled = true;
+                panelImage.raycastTarget = false;
             }
-            panelImage.raycastTarget = false;
             _panel.SetAsLastSibling();
             UpdatePanelLayout(grid);
-        }
-
-        private static Image FindNativePanelImage(RectTransform playerPanel)
-        {
-            if (playerPanel == null) return null;
-
-            Image best = null;
-            float largestArea = -1f;
-            foreach (Image image in playerPanel.GetComponentsInChildren<Image>(true))
-            {
-                if (image == null || image.sprite == null) continue;
-                RectTransform rect = image.rectTransform;
-                float area = Mathf.Abs(rect.rect.width * rect.rect.height);
-                if (area <= largestArea) continue;
-                best = image;
-                largestArea = area;
-            }
-            return best;
         }
 
         private static void UpdatePanelLayout(InventoryGrid grid)

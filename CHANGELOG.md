@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Replaced the separate-slot backdrop with a resized clone of Valheim's native crafting/inventory wood-and-leather background object.
+- Kept the cloned background behind the equipment and quick-slot cells and disabled its input raycast.
+
 ## 1.3.0
 
 - Replaced the separate equipment panel's black fill with Valheim's native inventory background sprite, material, tint, and image settings.
