@@ -196,17 +196,30 @@ namespace DadsEPI
         {
             Transform existing = element.transform.Find(LabelName);
             if (existing != null) return existing.GetComponent<TMP_Text>();
-            GameObject labelObject = new GameObject(LabelName, typeof(RectTransform), typeof(TextMeshProUGUI));
+            // TMP's Awake loads its default font. Keep the object inactive until
+            // the native Valheim font is assigned, rather than loading the absent
+            // LiberationSans asset once for every inventory cell.
+            GameObject labelObject = new GameObject(LabelName, typeof(RectTransform));
+            labelObject.SetActive(false);
             labelObject.transform.SetParent(element.transform, false);
             RectTransform rect = labelObject.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = new Vector2(2f, 2f);
             rect.offsetMax = new Vector2(-2f, -2f);
-            TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
-            TMP_Text fontSource = element.m_amount != null
+            TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
+            TMP_Text fontSource = element.m_amount != null && element.m_amount.font != null
                 ? element.m_amount
-                : InventoryGui.instance != null ? InventoryGui.instance.GetComponentInChildren<TMP_Text>(true) : null;
+                : null;
+            if (fontSource == null && InventoryGui.instance != null)
+            {
+                foreach (TMP_Text candidate in InventoryGui.instance.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    if (candidate.font == null) continue;
+                    fontSource = candidate;
+                    break;
+                }
+            }
             if (fontSource != null)
             {
                 label.font = fontSource.font;
@@ -218,6 +231,7 @@ namespace DadsEPI
             label.fontStyle = FontStyles.Bold;
             label.color = new Color(0.95f, 0.84f, 0.60f, 1f);
             label.raycastTarget = false;
+            labelObject.SetActive(true);
             return label;
         }
     }

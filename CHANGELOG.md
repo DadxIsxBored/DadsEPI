@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.5
+
+- Initialize slot labels while inactive and assign the native game font before activation, avoiding the missing LiberationSans default-font warnings.
+- When the amount label has no font, select an existing inventory text component with a valid font.
+
 ## 1.3.4
 
 - Removed equipment normalization and automatic equip calls from the recurring half-second inventory-size check.
