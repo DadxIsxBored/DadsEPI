@@ -162,6 +162,17 @@ namespace DadsEPI
             }
             int oldSlot = InventoryLayout.SlotIndex(item?.m_gridPos ?? new Vector2i(-1, -1), inventory.GetWidth());
             int newSlot = InventoryLayout.SlotIndex(pos, inventory.GetWidth());
+            if (item != null && oldSlot >= 0 && oldSlot < InventoryLayout.EquipmentSlotCount &&
+                (newSlot < 0 || newSlot >= InventoryLayout.EquipmentSlotCount) &&
+                ReferenceEquals(inventory.GetItemAt(item.m_gridPos.x, item.m_gridPos.y), item))
+            {
+                ItemDrop.ItemData swapItem = inventory.GetItemAt(pos.x, pos.y);
+                if (swapItem != null && !InventoryLayout.CanPlace(swapItem, item.m_gridPos, inventory.GetWidth()))
+                {
+                    __result = false;
+                    return false;
+                }
+            }
             if (item != null && item.m_equipped && oldSlot >= 0 && newSlot < 0) Player.m_localPlayer?.UnequipItem(item);
             if (item != null && newSlot >= 0 && newSlot < InventoryLayout.EquipmentSlotCount)
             {
@@ -183,12 +194,95 @@ namespace DadsEPI
         }
     }
 
+    [HarmonyPatch(typeof(InventoryGui), "OnSelectedItem")]
+    internal static class InventoryGuiSelectedItemPatch
+    {
+        private sealed class DragTarget
+        {
+            internal Inventory Inventory;
+            internal Vector2i EquipmentPosition;
+            internal Vector2i SuppressedPosition;
+            internal bool SuppressReequip;
+        }
+
+        private static DragTarget _dragTarget;
+
+        private static void Prefix(InventoryGrid __0, Vector2i __2, ItemDrop.ItemData ___m_dragItem,
+            Inventory ___m_dragInventory, out object __state)
+        {
+            __state = _dragTarget;
+            _dragTarget = null;
+            if (DadsEPIPlugin.ModEnabled?.Value != true || ___m_dragItem == null ||
+                !InventoryLayout.IsPlayerInventory(___m_dragInventory) ||
+                !InventoryLayout.IsPlayerInventory(__0.GetInventory()) ||
+                __2.y < 0 || __2.y >= ___m_dragInventory.GetHeight() ||
+                __2.x < 0 || __2.x >= ___m_dragInventory.GetWidth()) return;
+
+            bool sourceEquipment = InventoryLayout.IsInEquipmentSlot(___m_dragInventory, ___m_dragItem);
+            int targetSlot = InventoryLayout.SlotIndex(__2, ___m_dragInventory.GetWidth());
+            bool targetEquipment = targetSlot >= 0 && targetSlot < InventoryLayout.EquipmentSlotCount;
+            if (sourceEquipment && !targetEquipment && ___m_dragItem.m_equipped)
+            {
+                _dragTarget = new DragTarget
+                {
+                    Inventory = ___m_dragInventory,
+                    EquipmentPosition = ___m_dragItem.m_gridPos,
+                    SuppressedPosition = __2,
+                    SuppressReequip = true
+                };
+            }
+            else if (targetEquipment)
+            {
+                ItemDrop.ItemData occupant = ___m_dragInventory.GetItemAt(__2.x, __2.y);
+                _dragTarget = new DragTarget
+                {
+                    Inventory = ___m_dragInventory,
+                    EquipmentPosition = __2,
+                    SuppressedPosition = ___m_dragItem.m_gridPos,
+                    SuppressReequip = occupant != null && occupant.m_equipped
+                };
+            }
+        }
+
+        internal static bool WasDraggedOut(Humanoid humanoid, ItemDrop.ItemData item)
+        {
+            if (_dragTarget == null || !_dragTarget.SuppressReequip || item == null || !(humanoid is Player player) ||
+                player != Player.m_localPlayer) return false;
+            Inventory inventory = player.GetInventory();
+            return ReferenceEquals(inventory, _dragTarget.Inventory) &&
+                   ReferenceEquals(inventory.GetItemAt(_dragTarget.SuppressedPosition.x, _dragTarget.SuppressedPosition.y), item);
+        }
+
+        private static void Postfix()
+        {
+            if (_dragTarget == null || DadsEPIPlugin.AutoEquip?.Value != true) return;
+            Inventory inventory = _dragTarget.Inventory;
+            ItemDrop.ItemData replacement = inventory.GetItemAt(_dragTarget.EquipmentPosition.x, _dragTarget.EquipmentPosition.y);
+            if (replacement != null && replacement.IsEquipable() && !replacement.m_equipped &&
+                InventoryLayout.CanPlace(replacement, _dragTarget.EquipmentPosition, inventory.GetWidth()))
+                Player.m_localPlayer?.EquipItem(replacement);
+        }
+
+        private static Exception Finalizer(Exception __exception, object __state)
+        {
+            _dragTarget = (DragTarget)__state;
+            return __exception;
+        }
+    }
+
     [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.EquipItem), new[] { typeof(ItemDrop.ItemData), typeof(bool) })]
     internal static class EquipItemPatch
     {
-        private static void Prefix(Humanoid __instance, ItemDrop.ItemData item, out ItemDrop.ItemData __state)
+        private static bool Prefix(Humanoid __instance, ItemDrop.ItemData item, ref bool __result, out ItemDrop.ItemData __state)
         {
+            if (InventoryGuiSelectedItemPatch.WasDraggedOut(__instance, item))
+            {
+                __state = null;
+                __result = false;
+                return false;
+            }
             __state = UtilityEquipment.BeginEquip(__instance, item);
+            return true;
         }
 
         private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, bool __result, ItemDrop.ItemData __state)

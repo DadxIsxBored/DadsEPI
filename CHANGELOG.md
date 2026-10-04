@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1
+
+- Equip items placed directly into an empty dedicated slot by inventory pickup.
+- Keep equipment unequipped when dragged into ordinary inventory, including when Valheim clones the item during the move.
+- Equip replacement gear dropped into a dedicated slot and reject swaps that would place an incompatible item there.
+- Right-click equipping from ordinary inventory continues to move the item into its dedicated slot.
+
 ## 1.4.0
 
 - Fixed equipment swaps so an equipped item in a dedicated slot is unequipped before its replacement is dropped into the slot.
