@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.2
+
+- Use the completed inventory-grid drop to identify the item Valheim moved, including moves that create a new item record.
+- Keep gear dragged out of a dedicated slot unequipped and allow replacement gear to equip in that slot.
+- Leave a right-clicked, unequipped item in its dedicated slot until it is dragged elsewhere.
+
 ## 1.4.1
 
 - Equip items placed directly into an empty dedicated slot by inventory pickup.
