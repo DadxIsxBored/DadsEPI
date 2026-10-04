@@ -163,6 +163,12 @@ namespace DadsEPI
             int oldSlot = InventoryLayout.SlotIndex(item?.m_gridPos ?? new Vector2i(-1, -1), inventory.GetWidth());
             int newSlot = InventoryLayout.SlotIndex(pos, inventory.GetWidth());
             if (item != null && item.m_equipped && oldSlot >= 0 && newSlot < 0) Player.m_localPlayer?.UnequipItem(item);
+            if (item != null && newSlot >= 0 && newSlot < InventoryLayout.EquipmentSlotCount)
+            {
+                ItemDrop.ItemData occupant = inventory.GetItemAt(pos.x, pos.y);
+                if (occupant != null && !ReferenceEquals(occupant, item) && occupant.m_equipped)
+                    Player.m_localPlayer?.UnequipItem(occupant);
+            }
             return true;
         }
 

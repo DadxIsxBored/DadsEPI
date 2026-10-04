@@ -203,11 +203,7 @@ namespace DadsEPI
             if (slot < 0) return;
             Vector2i destination = SlotPosition(slot, inventory.GetWidth());
             ItemDrop.ItemData occupant = inventory.GetItemAt(destination.x, destination.y);
-            if (occupant != null)
-            {
-                if (Slots[slot].Accepts(occupant) && occupant.IsEquipable() && !occupant.m_equipped) player.EquipItem(occupant);
-                return;
-            }
+            if (occupant != null) return;
             ItemDrop.ItemData storedItem = inventory.GetAllItems().Contains(item)
                 ? item
                 : inventory.GetAllItems().FirstOrDefault(candidate => Slots[slot].Accepts(candidate) && string.Equals(PrefabName(candidate), PrefabName(item), StringComparison.Ordinal));

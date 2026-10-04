@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0
+
+- Fixed equipment swaps so an equipped item in a dedicated slot is unequipped before its replacement is dropped into the slot.
+- Stopped inventory additions from re-equipping an item left in an occupied equipment slot.
+- Thanks to Jigglefrizz and Ribas1337 for reporting the equipment swap bug.
+
 ## 1.3.5
 
 - Initialize slot labels while inactive and assign the native game font before activation, avoiding the missing LiberationSans default-font warnings.
