@@ -113,6 +113,44 @@ namespace DadsEPI
         }
     }
 
+    [HarmonyPatch(typeof(Inventory), nameof(Inventory.CanAddItem), new[] { typeof(ItemDrop.ItemData), typeof(int) })]
+    internal static class CanAddItemPatch
+    {
+        private static void Postfix(Inventory __instance, ItemDrop.ItemData item, int stack, ref bool __result)
+        {
+            if (DadsEPIPlugin.ModEnabled?.Value != true || !InventoryLayout.IsPlayerInventory(__instance) ||
+                item?.m_shared == null || !__result) return;
+
+            int required = stack > 0 ? stack : item.m_stack;
+            if (required <= item.m_shared.m_maxStackSize &&
+                InventoryLayout.FindGeneralEmpty(__instance, true).x >= 0) return;
+
+            int dedicatedSlot = DadsEPIPlugin.AutoEquip?.Value == true
+                ? InventoryLayout.FindEquipmentSlot(item)
+                : -1;
+            bool dedicatedEmpty = false;
+            if (dedicatedSlot >= 0)
+            {
+                Vector2i position = InventoryLayout.SlotPosition(dedicatedSlot, __instance.GetWidth());
+                dedicatedEmpty = __instance.GetItemAt(position.x, position.y) == null;
+                if (dedicatedEmpty && required <= item.m_shared.m_maxStackSize) return;
+            }
+
+            int capacity = 0;
+            foreach (ItemDrop.ItemData existing in __instance.GetAllItems())
+            {
+                if (existing.m_shared.m_name == item.m_shared.m_name &&
+                    existing.m_quality == item.m_quality &&
+                    existing.m_worldLevel == item.m_worldLevel)
+                    capacity += Math.Max(0, existing.m_shared.m_maxStackSize - existing.m_stack);
+            }
+
+            int emptySlots = InventoryLayout.CountGeneralEmpty(__instance);
+            if (dedicatedEmpty) emptySlots++;
+            __result = capacity + emptySlots * item.m_shared.m_maxStackSize >= required;
+        }
+    }
+
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), new[] { typeof(ItemDrop.ItemData) })]
     internal static class AddItemAutoEquipmentPatch
     {

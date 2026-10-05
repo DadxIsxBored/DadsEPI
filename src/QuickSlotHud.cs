@@ -10,6 +10,9 @@ namespace DadsEPI
         private const string RootName = "DadsEPI_QuickSlots";
         private static RectTransform _root;
         private static readonly List<GameObject> Elements = new List<GameObject>();
+        private static readonly string[] HiddenChildren = { "equiped", "queued", "selected" };
+        private static readonly Vector3[] Corners = new Vector3[4];
+        private static float _nextRefresh;
         private static Vector3 _lastMouse;
         private static bool _dragging;
         private static RectTransform _messageTextRect;
@@ -24,6 +27,7 @@ namespace DadsEPI
             _root = null;
             Elements.Clear();
             _dragging = false;
+            _nextRefresh = 0f;
         }
 
         internal static void Refresh(Hud hud)
@@ -31,6 +35,17 @@ namespace DadsEPI
             if (hud == null || Player.m_localPlayer == null || DadsEPIPlugin.ModEnabled?.Value != true) return;
             Ensure(hud);
             if (_root == null) return;
+            if (Time.unscaledTime < _nextRefresh)
+            {
+                if (DadsEPIPlugin.HudDragKeys.Value.IsPressed() || _dragging)
+                {
+                    UpdateDrag();
+                    _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
+                    ClampToViewport();
+                }
+                return;
+            }
+            _nextRefresh = Time.unscaledTime + 0.1f;
             bool visible = DadsEPIPlugin.ShowQuickSlots.Value && InventoryLayout.EnabledQuickSlots > 0;
             _root.gameObject.SetActive(visible);
             if (!visible)
@@ -96,6 +111,7 @@ namespace DadsEPI
 
         private static void EnsureElementCount(Hud hud, int count)
         {
+            if (Elements.Count >= count) return;
             HotkeyBar sourceBar = hud.m_rootObject.GetComponentInChildren<HotkeyBar>(true);
             if (sourceBar == null || sourceBar.m_elementPrefab == null) return;
             while (Elements.Count < count)
@@ -143,7 +159,7 @@ namespace DadsEPI
                     bindingRect.offsetMax = new Vector2(-2f, -2f);
                 }
             }
-            foreach (string child in new[] { "equiped", "queued", "selected" })
+            foreach (string child in HiddenChildren)
             {
                 Transform transform = element.transform.Find(child);
                 if (transform != null) transform.gameObject.SetActive(false);
@@ -195,11 +211,10 @@ namespace DadsEPI
         private static float WorldEdge(RectTransform rect, bool top)
         {
             if (rect == null) return top ? float.NegativeInfinity : float.PositiveInfinity;
-            var corners = new Vector3[4];
-            rect.GetWorldCorners(corners);
-            float edge = corners[0].y;
-            for (int index = 1; index < corners.Length; index++)
-                edge = top ? Mathf.Max(edge, corners[index].y) : Mathf.Min(edge, corners[index].y);
+            rect.GetWorldCorners(Corners);
+            float edge = Corners[0].y;
+            for (int index = 1; index < Corners.Length; index++)
+                edge = top ? Mathf.Max(edge, Corners[index].y) : Mathf.Min(edge, Corners[index].y);
             return edge;
         }
 
@@ -229,12 +244,11 @@ namespace DadsEPI
         private static void ClampToViewport()
         {
             if (_root == null || _root.parent == null) return;
-            var corners = new Vector3[4];
-            _root.GetWorldCorners(corners);
-            float minX = Mathf.Min(corners[0].x, corners[1].x);
-            float maxX = Mathf.Max(corners[2].x, corners[3].x);
-            float minY = Mathf.Min(corners[0].y, corners[3].y);
-            float maxY = Mathf.Max(corners[1].y, corners[2].y);
+            _root.GetWorldCorners(Corners);
+            float minX = Mathf.Min(Corners[0].x, Corners[1].x);
+            float maxX = Mathf.Max(Corners[2].x, Corners[3].x);
+            float minY = Mathf.Min(Corners[0].y, Corners[3].y);
+            float maxY = Mathf.Max(Corners[1].y, Corners[2].y);
             const float margin = 8f;
             float shiftX = minX < margin ? margin - minX : maxX > Screen.width - margin ? Screen.width - margin - maxX : 0f;
             float shiftY = minY < margin ? margin - minY : maxY > Screen.height - margin ? Screen.height - margin - maxY : 0f;

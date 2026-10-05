@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.3
+
+- general optimisations
+
 ## 1.4.2
 
 - Use the completed inventory-grid drop to identify the item Valheim moved, including moves that create a new item record.

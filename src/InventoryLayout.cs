@@ -21,9 +21,13 @@ namespace DadsEPI
         internal static int VanillaRows { get; private set; } = BaseVanillaRows;
         private static bool _normalizing;
         private static ItemDrop.ItemData _pendingAutoItem;
+        private static int _equipmentSlotCount;
+        private static InventoryGui _lastGui;
+        private static int _lastDisplayedRows = -1;
+        private static bool _lastSeparatePanel;
 
         internal static int NormalRows => Mathf.Clamp(VanillaRows, BaseVanillaRows, MaximumVanillaRows) + Mathf.Clamp(DadsEPIPlugin.ExtraRows.Value, 0, 5);
-        internal static int EquipmentSlotCount => Slots.Count(slot => !slot.Quick);
+        internal static int EquipmentSlotCount => _equipmentSlotCount;
         internal static int EnabledQuickSlots => DadsEPIPlugin.EquipmentRowEnabled.Value ? Mathf.Clamp(DadsEPIPlugin.QuickSlotCount.Value, 0, 8) : 0;
         internal static int StorageRows(int width) => DadsEPIPlugin.EquipmentRowEnabled.Value ? Mathf.CeilToInt(Slots.Count / (float)Mathf.Max(1, width)) : 0;
         internal static int TotalRows(int width) => NormalRows + StorageRows(width);
@@ -31,6 +35,8 @@ namespace DadsEPI
         internal static void RebuildSlots()
         {
             Slots.Clear();
+            _equipmentSlotCount = 0;
+            _lastDisplayedRows = -1;
             if (DadsEPIPlugin.EquipmentRowEnabled?.Value != true) return;
             AddEquipment("Head", DadsEPIPlugin.HeadLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet);
             AddEquipment("Chest", DadsEPIPlugin.ChestLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest);
@@ -52,6 +58,7 @@ namespace DadsEPI
                 if (name.Length > 0 && prefabs.Count > 0) AddEquipment(name, name, item => prefabs.Contains(PrefabName(item)));
             }
 
+            _equipmentSlotCount = Slots.Count;
             for (int index = 0; index < Mathf.Clamp(DadsEPIPlugin.QuickSlotCount.Value, 0, 8); index++)
             {
                 int captured = index;
@@ -79,11 +86,22 @@ namespace DadsEPI
             int target = TotalRows(inventory.GetWidth());
             if (inventory.GetHeight() < target) inventory.SetHeight(target);
             if (normalizeItems) Normalize(player, inventory);
-            int occupiedHeight = inventory.GetAllItems().Count == 0 ? 0 : inventory.GetAllItems().Max(item => item.m_gridPos.y + 1);
+            int occupiedHeight = 0;
+            foreach (ItemDrop.ItemData item in inventory.GetAllItems())
+                occupiedHeight = Math.Max(occupiedHeight, item.m_gridPos.y + 1);
             int safeHeight = Mathf.Max(target, occupiedHeight);
             if (inventory.GetHeight() != safeHeight) inventory.SetHeight(safeHeight);
-            if (InventoryGui.instance != null)
-                InventoryGui.instance.SetInventorySize(DadsEPIPlugin.SeparateEquipmentPanel.Value ? NormalRows : safeHeight);
+            InventoryGui gui = InventoryGui.instance;
+            bool separatePanel = DadsEPIPlugin.SeparateEquipmentPanel.Value;
+            int displayedRows = separatePanel ? NormalRows : safeHeight;
+            if (gui != null && (gui != _lastGui || displayedRows != _lastDisplayedRows ||
+                                separatePanel != _lastSeparatePanel || normalizeItems))
+            {
+                gui.SetInventorySize(displayedRows);
+                _lastGui = gui;
+                _lastDisplayedRows = displayedRows;
+                _lastSeparatePanel = separatePanel;
+            }
             if (player.m_tombstone != null)
             {
                 Container tombstone = player.m_tombstone.GetComponent<Container>();
