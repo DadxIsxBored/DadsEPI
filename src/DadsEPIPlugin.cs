@@ -13,7 +13,7 @@ namespace DadsEPI
     {
         public const string PluginGuid = "com.dadisbored.dadsepi";
         public const string PluginName = "DadsEPI";
-        public const string PluginVersion = "1.4.3";
+        public const string PluginVersion = "1.4.4";
 
         internal static ConfigEntry<bool> ModEnabled;
         internal static ConfigEntry<int> ExtraRows;
@@ -103,12 +103,27 @@ namespace DadsEPI
                 QuickHotkeyLabels[index] = Config.Bind("8 - Quick Slot Hotkeys", $"Hotkey {slot} Display Text", $"Alt + {defaults[index].MainKey.ToString().Replace("Alpha", "")}", $"HUD text for quick slot {slot}.");
             }
 
-            Watch(ModEnabled); Watch(ExtraRows); Watch(EquipmentRowEnabled); Watch(SeparateEquipmentPanel); Watch(AutoEquip);
-            Watch(QuickSlotCount); Watch(ShowQuickSlots); Watch(AlwaysShowQuickSlots); Watch(QuickSlotsPerRow);
-            Watch(WisplightSlot); Watch(WishboneSlot); Watch(CryptKeySlot); Watch(ArrowsSlot); Watch(ShieldSlot); Watch(UtilitySlot); Watch(RemovedEquipmentSlots);
-            for (int index = 0; index < CustomSlotNames.Length; index++) { Watch(CustomSlotNames[index]); Watch(CustomSlotItems[index]); }
-            Watch(HeadLabel); Watch(ChestLabel); Watch(LegsLabel); Watch(BackLabel); Watch(UtilityLabel);
-            for (int index = 0; index < 8; index++) { Watch(QuickHotkeys[index]); Watch(QuickHotkeyLabels[index]); }
+            Watch(ModEnabled, OnDisplaySettingChanged); Watch(ExtraRows, OnLayoutSettingChanged); Watch(EquipmentRowEnabled, OnLayoutSettingChanged);
+            Watch(SeparateEquipmentPanel, OnDisplaySettingChanged); Watch(AutoEquip, OnDisplaySettingChanged);
+            Watch(QuickSlotCount, OnLayoutSettingChanged); Watch(ShowQuickSlots, OnDisplaySettingChanged);
+            Watch(AlwaysShowQuickSlots, OnDisplaySettingChanged); Watch(QuickSlotsPerRow, OnDisplaySettingChanged);
+            Watch(WisplightSlot, OnLayoutSettingChanged); Watch(WishboneSlot, OnLayoutSettingChanged);
+            Watch(CryptKeySlot, OnLayoutSettingChanged); Watch(ArrowsSlot, OnLayoutSettingChanged);
+            Watch(ShieldSlot, OnLayoutSettingChanged); Watch(UtilitySlot, OnLayoutSettingChanged);
+            Watch(RemovedEquipmentSlots, OnLayoutSettingChanged);
+            for (int index = 0; index < CustomSlotNames.Length; index++)
+            {
+                Watch(CustomSlotNames[index], OnLayoutSettingChanged);
+                Watch(CustomSlotItems[index], OnLayoutSettingChanged);
+            }
+            Watch(HeadLabel, OnLayoutSettingChanged); Watch(ChestLabel, OnLayoutSettingChanged);
+            Watch(LegsLabel, OnLayoutSettingChanged); Watch(BackLabel, OnLayoutSettingChanged);
+            Watch(UtilityLabel, OnLayoutSettingChanged);
+            for (int index = 0; index < 8; index++)
+            {
+                Watch(QuickHotkeys[index], OnDisplaySettingChanged);
+                Watch(QuickHotkeyLabels[index], OnDisplaySettingChanged);
+            }
             InventoryLayout.RebuildSlots();
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll(typeof(DadsEPIPlugin).Assembly);
@@ -117,12 +132,19 @@ namespace DadsEPI
 
         private void OnDestroy() => _harmony?.UnpatchSelf();
 
-        private static void Watch<T>(ConfigEntry<T> entry) => entry.SettingChanged += OnLayoutSettingChanged;
+        private static void Watch<T>(ConfigEntry<T> entry, EventHandler handler) => entry.SettingChanged += handler;
 
         private static void OnLayoutSettingChanged(object sender, EventArgs args)
         {
-            InventoryLayout.RebuildSlots();
-            if (Player.m_localPlayer != null) InventoryLayout.Apply(Player.m_localPlayer, true);
+            InventoryLayout.RebuildForConfigChange(Player.m_localPlayer);
+            SlotVisuals.Reset();
+            QuickSlotHud.Reset();
+        }
+
+        private static void OnDisplaySettingChanged(object sender, EventArgs args)
+        {
+            InventoryLayout.RefreshQuickLabels();
+            if (Player.m_localPlayer != null) InventoryLayout.Apply(Player.m_localPlayer, false);
             SlotVisuals.Reset();
             QuickSlotHud.Reset();
         }

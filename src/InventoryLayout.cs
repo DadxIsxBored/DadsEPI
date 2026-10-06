@@ -22,6 +22,7 @@ namespace DadsEPI
         private static bool _normalizing;
         private static ItemDrop.ItemData _pendingAutoItem;
         private static int _equipmentSlotCount;
+        private static int _layoutNormalRows = BaseVanillaRows;
         private static InventoryGui _lastGui;
         private static int _lastDisplayedRows = -1;
         private static bool _lastSeparatePanel;
@@ -36,6 +37,7 @@ namespace DadsEPI
         {
             Slots.Clear();
             _equipmentSlotCount = 0;
+            _layoutNormalRows = NormalRows;
             _lastDisplayedRows = -1;
             if (DadsEPIPlugin.EquipmentRowEnabled?.Value != true) return;
             AddEquipment("Head", DadsEPIPlugin.HeadLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet);
@@ -66,6 +68,100 @@ namespace DadsEPI
             }
         }
 
+        internal static void RebuildForConfigChange(Player player)
+        {
+            int previousRows = _layoutNormalRows;
+            DedicatedSlot[] previousSlots = Slots.ToArray();
+            RebuildSlots();
+            if (player == null || DadsEPIPlugin.ModEnabled?.Value != true) return;
+            Inventory inventory = player.GetInventory();
+            if (inventory == null) return;
+            MigrateSlots(inventory, previousRows, previousSlots);
+            Apply(player, false);
+        }
+
+        internal static void RefreshQuickLabels()
+        {
+            for (int index = 0; index < Slots.Count; index++)
+                if (Slots[index].Quick && int.TryParse(Slots[index].Id.Substring(5), out int quickNumber) &&
+                    quickNumber >= 1 && quickNumber <= DadsEPIPlugin.QuickHotkeyLabels.Length)
+                    Slots[index].Label = QuickLabel(quickNumber - 1);
+        }
+
+        private static void MigrateSlots(Inventory inventory, int previousRows, DedicatedSlot[] previousSlots)
+        {
+            int width = inventory.GetWidth();
+            if (width <= 0) return;
+            var items = new List<ItemDrop.ItemData>(inventory.GetAllItems());
+            var destinations = new Dictionary<ItemDrop.ItemData, Vector2i>();
+            var occupied = new HashSet<long>();
+            var assignedSlots = new HashSet<int>();
+
+            for (int oldIndex = 0; oldIndex < previousSlots.Length; oldIndex++)
+            {
+                Vector2i oldPosition = new Vector2i(oldIndex % width, previousRows + oldIndex / width);
+                ItemDrop.ItemData item = inventory.GetItemAt(oldPosition.x, oldPosition.y);
+                if (item == null) continue;
+                for (int newIndex = 0; newIndex < Slots.Count; newIndex++)
+                {
+                    if (assignedSlots.Contains(newIndex) || previousSlots[oldIndex].Id != Slots[newIndex].Id ||
+                        previousSlots[oldIndex].Quick != Slots[newIndex].Quick || !Slots[newIndex].Accepts(item)) continue;
+                    Vector2i destination = SlotPosition(newIndex, width);
+                    destinations[item] = destination;
+                    occupied.Add(PositionKey(destination, width));
+                    assignedSlots.Add(newIndex);
+                    break;
+                }
+            }
+
+            foreach (ItemDrop.ItemData item in items)
+            {
+                if (destinations.ContainsKey(item)) continue;
+                Vector2i position = item.m_gridPos;
+                int oldIndex = (position.y - previousRows) * width + position.x;
+                bool wasDedicated = oldIndex >= 0 && oldIndex < previousSlots.Length;
+                bool ordinaryPosition = position.y >= 0 && position.y < NormalRows;
+                bool overflowPosition = position.y >= NormalRows && SlotIndex(position, width) < 0 && !wasDedicated;
+                long key = PositionKey(position, width);
+                if (position.x >= 0 && position.x < width && (ordinaryPosition || overflowPosition) && occupied.Add(key))
+                    destinations[item] = position;
+            }
+
+            int overflowRow = Math.Max(TotalRows(width), inventory.GetHeight());
+            foreach (ItemDrop.ItemData item in items)
+            {
+                if (destinations.ContainsKey(item)) continue;
+                Vector2i position = new Vector2i(-1, -1);
+                for (int y = 0; y < NormalRows && position.x < 0; y++)
+                    for (int x = 0; x < width; x++)
+                        if (occupied.Add(PositionKey(new Vector2i(x, y), width)))
+                        {
+                            position = new Vector2i(x, y);
+                            break;
+                        }
+                if (position.x < 0)
+                {
+                    while (occupied.Contains(PositionKey(new Vector2i(0, overflowRow), width))) overflowRow++;
+                    position = new Vector2i(0, overflowRow++);
+                    occupied.Add(PositionKey(position, width));
+                    DadsEPIPlugin.ModLogger?.LogWarning("Inventory capacity decreased; an item was retained in an overflow row.");
+                }
+                destinations[item] = position;
+            }
+
+            bool moved = false;
+            foreach (ItemDrop.ItemData item in items)
+            {
+                Vector2i destination = destinations[item];
+                if (item.m_gridPos == destination) continue;
+                item.m_gridPos = destination;
+                moved = true;
+            }
+            if (moved) inventory.m_onChanged?.Invoke();
+        }
+
+        private static long PositionKey(Vector2i position, int width) => (long)position.y * width + position.x;
+
         internal static void SetVanillaRows(int rows)
         {
             VanillaRows = Mathf.Clamp(rows, BaseVanillaRows, MaximumVanillaRows);
@@ -91,6 +187,7 @@ namespace DadsEPI
                 occupiedHeight = Math.Max(occupiedHeight, item.m_gridPos.y + 1);
             int safeHeight = Mathf.Max(target, occupiedHeight);
             if (inventory.GetHeight() != safeHeight) inventory.SetHeight(safeHeight);
+            _layoutNormalRows = NormalRows;
             InventoryGui gui = InventoryGui.instance;
             bool separatePanel = DadsEPIPlugin.SeparateEquipmentPanel.Value;
             int displayedRows = separatePanel ? NormalRows : safeHeight;
@@ -264,6 +361,8 @@ namespace DadsEPI
                 foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(inventory.GetAllItems()))
                 {
                     if (!item.m_equipped) continue;
+                    int currentSlot = SlotIndex(item.m_gridPos, inventory.GetWidth());
+                    if (currentSlot >= 0 && Slots[currentSlot].Accepts(item)) continue;
                     int slot = FindEquipmentSlot(item);
                     if (slot >= 0) MoveItem(player, inventory, item, SlotPosition(slot, inventory.GetWidth()));
                 }

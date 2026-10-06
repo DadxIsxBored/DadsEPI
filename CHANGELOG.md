@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.4
+
+- Keep quick-slot and equipment-slot items in their assigned slots when changing settings in the mod manager.
+- Move items by slot identity only when the inventory layout changes; refresh display settings without rearranging inventory items.
+- Preserve equipped items already in valid quick or equipment slots when loading a character.
+
 ## 1.4.3
 
 - general optimisations
