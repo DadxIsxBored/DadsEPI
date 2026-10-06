@@ -80,14 +80,6 @@ namespace DadsEPI
             Apply(player, false);
         }
 
-        internal static void RefreshQuickLabels()
-        {
-            for (int index = 0; index < Slots.Count; index++)
-                if (Slots[index].Quick && int.TryParse(Slots[index].Id.Substring(5), out int quickNumber) &&
-                    quickNumber >= 1 && quickNumber <= DadsEPIPlugin.QuickHotkeyLabels.Length)
-                    Slots[index].Label = QuickLabel(quickNumber - 1);
-        }
-
         private static void MigrateSlots(Inventory inventory, int previousRows, DedicatedSlot[] previousSlots)
         {
             int width = inventory.GetWidth();

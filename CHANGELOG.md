@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.5
+
+- Restore the prior display-setting UI rebuild while retaining the inventory item placement changes.
+
 ## 1.4.4
 
 - Keep quick-slot and equipment-slot items in their assigned slots when changing settings in the mod manager.
