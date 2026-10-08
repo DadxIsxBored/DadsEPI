@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.7
+
+- Allow the Arrows slot to accept the listed arrow and bolt prefab types.
+
 ## 1.4.6
 
 - Keep the separate equipment panel directly after the player inventory in UI order so the Achievements window can cover it.

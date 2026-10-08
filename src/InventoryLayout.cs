@@ -26,6 +26,13 @@ namespace DadsEPI
         private static InventoryGui _lastGui;
         private static int _lastDisplayedRows = -1;
         private static bool _lastSeparatePanel;
+        private static readonly HashSet<string> DefaultAmmoPrefabs = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "ArrowWood", "ArrowFlint", "ArrowBronze", "ArrowFire", "ArrowIron", "ArrowPoison",
+            "ArrowObsidian", "ArrowFrost", "ArrowSilver", "ArrowNeedle", "ArrowCarapace",
+            "ArrowCharred", "ArrowBloodGold", "BoltBone", "BoltIron", "BoltBlackmetal",
+            "BoltCarapace", "BoltCharred", "BoltBloodGold"
+        };
 
         internal static int NormalRows => Mathf.Clamp(VanillaRows, BaseVanillaRows, MaximumVanillaRows) + Mathf.Clamp(DadsEPIPlugin.ExtraRows.Value, 0, 5);
         internal static int EquipmentSlotCount => _equipmentSlotCount;
@@ -421,9 +428,7 @@ namespace DadsEPI
         private static bool IsWisplight(ItemDrop.ItemData item) => IsPrefab(item, "Demister") || IsPrefab(item, "Wisplight");
         private static bool IsArrow(ItemDrop.ItemData item)
         {
-            if (item?.m_shared == null) return false;
-            ItemDrop.ItemData.ItemType type = item.m_shared.m_itemType;
-            return (type == ItemDrop.ItemData.ItemType.Ammo || type == ItemDrop.ItemData.ItemType.AmmoNonEquipable) && PrefabName(item).StartsWith("Arrow", StringComparison.Ordinal);
+            return DefaultAmmoPrefabs.Contains(PrefabName(item));
         }
     }
 }

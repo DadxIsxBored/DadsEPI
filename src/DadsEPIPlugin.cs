@@ -13,7 +13,7 @@ namespace DadsEPI
     {
         public const string PluginGuid = "com.dadisbored.dadsepi";
         public const string PluginName = "DadsEPI";
-        public const string PluginVersion = "1.4.6";
+        public const string PluginVersion = "1.4.7";
 
         internal static ConfigEntry<bool> ModEnabled;
         internal static ConfigEntry<int> ExtraRows;
@@ -68,7 +68,7 @@ namespace DadsEPI
             WisplightSlot = Config.Bind("4 - Special Equipment Slots", "Enable Wisplight Slot", true, "Add a Wisplight-only slot.");
             WishboneSlot = Config.Bind("4 - Special Equipment Slots", "Enable Wishbone Slot", true, "Add a Wishbone-only slot.");
             CryptKeySlot = Config.Bind("4 - Special Equipment Slots", "Enable Crypt Key Slot", true, "Add a Crypt Key-only slot.");
-            ArrowsSlot = Config.Bind("4 - Special Equipment Slots", "Enable Arrows Slot", true, "Add an arrow-ammunition slot.");
+            ArrowsSlot = Config.Bind("4 - Special Equipment Slots", "Enable Arrows Slot", true, "Add an arrow and bolt ammunition slot.");
             ShieldSlot = Config.Bind("4 - Special Equipment Slots", "Enable Shield Slot", true, "Add a shield-only slot.");
             UtilitySlot = Config.Bind("4 - Special Equipment Slots", "Enable Utility Slot", true, "Add a utility-item slot.");
             RemovedEquipmentSlots = Config.Bind("4.5 - Equipment Slot Management", "Removed Equipment Slots", "", "Comma or semicolon separated slot names.");
