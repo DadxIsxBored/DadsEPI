@@ -8,6 +8,7 @@ namespace DadsEPI
     internal static class QuickSlotHud
     {
         private const string RootName = "DadsEPI_QuickSlots";
+        private const float DefaultHudX = 47f;
         private static RectTransform _root;
         private static readonly List<GameObject> Elements = new List<GameObject>();
         private static readonly string[] HiddenChildren = { "equiped", "queued", "selected" };
@@ -35,12 +36,14 @@ namespace DadsEPI
             if (hud == null || Player.m_localPlayer == null || DadsEPIPlugin.ModEnabled?.Value != true) return;
             Ensure(hud);
             if (_root == null) return;
+            HotkeyBar sourceBar = hud.m_rootObject.GetComponentInChildren<HotkeyBar>(true);
             if (Time.unscaledTime < _nextRefresh)
             {
                 if (DadsEPIPlugin.HudDragKeys.Value.IsPressed() || _dragging)
                 {
                     UpdateDrag();
                     _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
+                    AlignWithHotbar(sourceBar);
                     ClampToViewport();
                 }
                 return;
@@ -55,9 +58,11 @@ namespace DadsEPI
             }
 
             int count = VisibleSlotCount();
-            EnsureElementCount(hud, count);
+            EnsureElementCount(sourceBar, count);
             int perRow = Mathf.Clamp(DadsEPIPlugin.QuickSlotsPerRow.Value, 1, 8);
-            float spacing = 70f;
+            float spacing = sourceBar != null
+                ? _root.InverseTransformVector(sourceBar.transform.TransformVector(new Vector3(sourceBar.m_elementSpace, 0f, 0f))).x
+                : 70f;
             Inventory inventory = Player.m_localPlayer.GetInventory();
             for (int index = 0; index < Elements.Count; index++)
             {
@@ -80,6 +85,7 @@ namespace DadsEPI
             _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
             UpdateDrag();
             _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
+            AlignWithHotbar(sourceBar);
             ClampToViewport();
             PositionPickupMessage(count > 0);
         }
@@ -109,10 +115,9 @@ namespace DadsEPI
             _root.pivot = new Vector2(0f, 1f);
         }
 
-        private static void EnsureElementCount(Hud hud, int count)
+        private static void EnsureElementCount(HotkeyBar sourceBar, int count)
         {
             if (Elements.Count >= count) return;
-            HotkeyBar sourceBar = hud.m_rootObject.GetComponentInChildren<HotkeyBar>(true);
             if (sourceBar == null || sourceBar.m_elementPrefab == null) return;
             while (Elements.Count < count)
             {
@@ -120,6 +125,20 @@ namespace DadsEPI
                 element.name = $"DadsEPI_QuickSlot_{Elements.Count + 1}";
                 Elements.Add(element);
             }
+        }
+
+        private static void AlignWithHotbar(HotkeyBar sourceBar)
+        {
+            if (sourceBar == null || sourceBar.transform.childCount == 0 || Elements.Count == 0) return;
+            RectTransform hotbarSlot = sourceBar.transform.GetChild(0) as RectTransform;
+            RectTransform quickSlot = Elements[0].transform as RectTransform;
+            if (hotbarSlot == null || quickSlot == null) return;
+            hotbarSlot.GetWorldCorners(Corners);
+            float hotbarCenter = (Corners[0].x + Corners[2].x) * 0.5f;
+            quickSlot.GetWorldCorners(Corners);
+            float quickCenter = (Corners[0].x + Corners[2].x) * 0.5f;
+            float configuredOffset = _root.parent.TransformVector(new Vector3(DadsEPIPlugin.HudPosition.Value.x - DefaultHudX, 0f, 0f)).x;
+            _root.position += new Vector3(hotbarCenter - quickCenter + configuredOffset, 0f, 0f);
         }
 
         private static void SetElement(GameObject element, ItemDrop.ItemData item, int index)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.8
+
+- Align quick-slot centers and spacing with the main hotbar across UI scales.
+
 ## 1.4.7
 
 - Allow the Arrows slot to accept the listed arrow and bolt prefab types.
