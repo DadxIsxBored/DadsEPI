@@ -120,6 +120,8 @@ namespace DadsEPI
             if (existing != null)
             {
                 _panel = existing.GetComponent<RectTransform>();
+                if (playerPanel != null && _panel != null)
+                    _panel.SetSiblingIndex(playerPanel.GetSiblingIndex() + 1);
                 return;
             }
             Transform nativeBackground = InventoryGui.instance != null && InventoryGui.instance.m_crafting != null
@@ -150,7 +152,9 @@ namespace DadsEPI
                 panelImage.enabled = true;
                 panelImage.raycastTarget = false;
             }
-            _panel.SetAsLastSibling();
+            // Keep inventory content above the player panel without covering later windows.
+            if (playerPanel != null && _panel.parent == playerPanel.parent)
+                _panel.SetSiblingIndex(playerPanel.GetSiblingIndex() + 1);
             UpdatePanelLayout(grid);
         }
 
