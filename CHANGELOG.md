@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.6
+
+- Keep the separate equipment panel directly after the player inventory in UI order so the Achievements window can cover it.
+
 ## 1.4.5
 
 - Restore the prior display-setting UI rebuild while retaining the inventory item placement changes.
