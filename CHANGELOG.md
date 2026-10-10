@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.11
+
+- Apply mod-manager slot edits as one final layout change when the manager closes.
+- Leave item positions untouched when a setting changes without changing slot positions.
+
 ## 1.4.10
 
 - Anchor quick slots to the first hotbar slot and keep them directly below the hotbar on every HUD update.

@@ -42,10 +42,16 @@ namespace DadsEPI
             "TrinketScaleStaminaDamage", "TrinketSilverDamage", "TrinketSilverResist"
         };
 
-        internal static int NormalRows => Mathf.Clamp(VanillaRows, BaseVanillaRows, MaximumVanillaRows) + Mathf.Clamp(DadsEPIPlugin.ExtraRows.Value, 0, 5);
+        internal static int NormalRows => DadsEPIPlugin.ConfigEditActive
+            ? _layoutNormalRows
+            : Mathf.Clamp(VanillaRows, BaseVanillaRows, MaximumVanillaRows) + Mathf.Clamp(DadsEPIPlugin.ExtraRows.Value, 0, 5);
         internal static int EquipmentSlotCount => _equipmentSlotCount;
-        internal static int EnabledQuickSlots => DadsEPIPlugin.EquipmentRowEnabled.Value ? Mathf.Clamp(DadsEPIPlugin.QuickSlotCount.Value, 0, 8) : 0;
-        internal static int StorageRows(int width) => DadsEPIPlugin.EquipmentRowEnabled.Value ? Mathf.CeilToInt(Slots.Count / (float)Mathf.Max(1, width)) : 0;
+        internal static int EnabledQuickSlots => DadsEPIPlugin.ConfigEditActive
+            ? Slots.Count - _equipmentSlotCount
+            : DadsEPIPlugin.EquipmentRowEnabled.Value ? Mathf.Clamp(DadsEPIPlugin.QuickSlotCount.Value, 0, 8) : 0;
+        internal static int StorageRows(int width) => (DadsEPIPlugin.ConfigEditActive || DadsEPIPlugin.EquipmentRowEnabled.Value)
+            ? Mathf.CeilToInt(Slots.Count / (float)Mathf.Max(1, width))
+            : 0;
         internal static int TotalRows(int width) => NormalRows + StorageRows(width);
 
         internal static void RebuildSlots()
@@ -92,7 +98,10 @@ namespace DadsEPI
             if (player == null || DadsEPIPlugin.ModEnabled?.Value != true) return;
             Inventory inventory = player.GetInventory();
             if (inventory == null) return;
-            MigrateSlots(inventory, previousRows, previousSlots);
+            bool positionsChanged = previousRows != NormalRows || previousSlots.Length != Slots.Count;
+            for (int index = 0; !positionsChanged && index < previousSlots.Length; index++)
+                positionsChanged = previousSlots[index].Id != Slots[index].Id || previousSlots[index].Quick != Slots[index].Quick;
+            if (positionsChanged) MigrateSlots(inventory, previousRows, previousSlots);
             Apply(player, false);
         }
 

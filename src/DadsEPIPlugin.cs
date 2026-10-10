@@ -13,7 +13,7 @@ namespace DadsEPI
     {
         public const string PluginGuid = "com.dadisbored.dadsepi";
         public const string PluginName = "DadsEPI";
-        public const string PluginVersion = "1.4.10";
+        public const string PluginVersion = "1.4.11";
 
         internal static ConfigEntry<bool> ModEnabled;
         internal static ConfigEntry<int> ExtraRows;
@@ -48,6 +48,24 @@ namespace DadsEPI
 
         private Harmony _harmony;
         private float _nextLayoutCheck;
+        private static int _configEditDepth;
+        private static bool _layoutChangePending;
+        private static bool _displayChangePending;
+
+        internal static bool ConfigEditActive => _configEditDepth > 0;
+
+        public static void BeginConfigEdit() => _configEditDepth++;
+
+        public static void EndConfigEdit()
+        {
+            if (_configEditDepth == 0 || --_configEditDepth > 0) return;
+            bool layoutChanged = _layoutChangePending;
+            bool displayChanged = _displayChangePending;
+            _layoutChangePending = false;
+            _displayChangePending = false;
+            if (layoutChanged) OnLayoutSettingChanged(null, EventArgs.Empty);
+            else if (displayChanged) OnDisplaySettingChanged(null, EventArgs.Empty);
+        }
 
         private void Awake()
         {
@@ -139,6 +157,11 @@ namespace DadsEPI
 
         private static void OnLayoutSettingChanged(object sender, EventArgs args)
         {
+            if (ConfigEditActive)
+            {
+                _layoutChangePending = true;
+                return;
+            }
             InventoryLayout.RebuildForConfigChange(Player.m_localPlayer);
             SlotVisuals.Reset();
             QuickSlotHud.Reset();
@@ -146,6 +169,11 @@ namespace DadsEPI
 
         private static void OnDisplaySettingChanged(object sender, EventArgs args)
         {
+            if (ConfigEditActive)
+            {
+                _displayChangePending = true;
+                return;
+            }
             InventoryLayout.RebuildSlots();
             if (Player.m_localPlayer != null) InventoryLayout.Apply(Player.m_localPlayer, false);
             SlotVisuals.Reset();
@@ -154,7 +182,7 @@ namespace DadsEPI
 
         private void Update()
         {
-            if (ModEnabled?.Value != true || Player.m_localPlayer == null) return;
+            if (ConfigEditActive || ModEnabled?.Value != true || Player.m_localPlayer == null) return;
             if (Time.unscaledTime >= _nextLayoutCheck)
             {
                 _nextLayoutCheck = Time.unscaledTime + 0.5f;
