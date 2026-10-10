@@ -88,8 +88,8 @@ namespace DadsEPI
             UtilityLabel = Config.Bind("6 - Equipment Slot Labels", "Utility Slot Label", "Utility", "Utility slot label.");
 
             HudScale = Config.Bind("7 - Quick Slots Customization", "HUD Size", 1f, "Quick-slot HUD scale.");
-            HudPosition = Config.Bind("7 - Quick Slots Customization", "HUD Position", new Vector2(47f, -115f), "Quick-slot HUD anchored position.");
-            HudDragKeys = Config.Bind("7 - Quick Slots Customization", "Drag to Reposition Keys", new KeyboardShortcut(KeyCode.Mouse0, KeyCode.LeftControl), "Drag the quick-slot HUD.");
+            HudPosition = Config.Bind("7 - Quick Slots Customization", "HUD Position", new Vector2(47f, -115f), "Legacy setting; quick slots stay anchored directly below the hotbar.");
+            HudDragKeys = Config.Bind("7 - Quick Slots Customization", "Drag to Reposition Keys", new KeyboardShortcut(KeyCode.Mouse0, KeyCode.LeftControl), "Legacy setting; quick-slot dragging is disabled.");
 
             KeyboardShortcut[] defaults =
             {

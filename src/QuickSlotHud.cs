@@ -8,14 +8,12 @@ namespace DadsEPI
     internal static class QuickSlotHud
     {
         private const string RootName = "DadsEPI_QuickSlots";
-        private const float DefaultHudX = 47f;
+        private const float HotbarGap = 10f;
         private static RectTransform _root;
         private static readonly List<GameObject> Elements = new List<GameObject>();
         private static readonly string[] HiddenChildren = { "equiped", "queued", "selected" };
         private static readonly Vector3[] Corners = new Vector3[4];
         private static float _nextRefresh;
-        private static Vector3 _lastMouse;
-        private static bool _dragging;
         private static RectTransform _messageTextRect;
         private static RectTransform _messageIconRect;
         private static Vector2 _messageTextPosition;
@@ -27,7 +25,6 @@ namespace DadsEPI
             if (_root != null) Object.Destroy(_root.gameObject);
             _root = null;
             Elements.Clear();
-            _dragging = false;
             _nextRefresh = 0f;
         }
 
@@ -39,13 +36,7 @@ namespace DadsEPI
             HotkeyBar sourceBar = hud.m_rootObject.GetComponentInChildren<HotkeyBar>(true);
             if (Time.unscaledTime < _nextRefresh)
             {
-                if (DadsEPIPlugin.HudDragKeys.Value.IsPressed() || _dragging)
-                {
-                    UpdateDrag();
-                    _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
-                    AlignWithHotbar(sourceBar);
-                    ClampToViewport();
-                }
+                if (_root.gameObject.activeSelf) AlignWithHotbar(sourceBar);
                 return;
             }
             _nextRefresh = Time.unscaledTime + 0.1f;
@@ -82,11 +73,7 @@ namespace DadsEPI
             }
             _root.sizeDelta = new Vector2(Mathf.Min(count, perRow) * spacing, Mathf.CeilToInt(count / (float)perRow) * spacing);
             _root.localScale = Vector3.one * Mathf.Clamp(DadsEPIPlugin.HudScale.Value, 0.25f, 3f);
-            _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
-            UpdateDrag();
-            _root.anchoredPosition = DadsEPIPlugin.HudPosition.Value;
             AlignWithHotbar(sourceBar);
-            ClampToViewport();
             PositionPickupMessage(count > 0);
         }
 
@@ -134,11 +121,11 @@ namespace DadsEPI
             RectTransform quickSlot = Elements[0].transform as RectTransform;
             if (hotbarSlot == null || quickSlot == null) return;
             hotbarSlot.GetWorldCorners(Corners);
-            float hotbarCenter = (Corners[0].x + Corners[2].x) * 0.5f;
+            float hotbarLeft = Corners[0].x;
+            float hotbarBottom = Corners[0].y;
             quickSlot.GetWorldCorners(Corners);
-            float quickCenter = (Corners[0].x + Corners[2].x) * 0.5f;
-            float configuredOffset = _root.parent.TransformVector(new Vector3(DadsEPIPlugin.HudPosition.Value.x - DefaultHudX, 0f, 0f)).x;
-            _root.position += new Vector3(hotbarCenter - quickCenter + configuredOffset, 0f, 0f);
+            float gap = Mathf.Abs(sourceBar.transform.TransformVector(new Vector3(0f, HotbarGap, 0f)).y);
+            _root.position += new Vector3(hotbarLeft - Corners[0].x, hotbarBottom - gap - Corners[1].y, 0f);
         }
 
         private static void SetElement(GameObject element, ItemDrop.ItemData item, int index)
@@ -242,36 +229,6 @@ namespace DadsEPI
             if (rect == null || rect.parent == null) return;
             float localOffset = rect.parent.InverseTransformVector(new Vector3(0f, worldOffset, 0f)).y;
             rect.anchoredPosition = originalPosition + new Vector2(0f, localOffset);
-        }
-
-        private static void UpdateDrag()
-        {
-            Vector3 mouse = Input.mousePosition;
-            if (DadsEPIPlugin.HudDragKeys.Value.IsPressed())
-            {
-                if (!_dragging) _dragging = RectTransformUtility.RectangleContainsScreenPoint(_root, mouse);
-                if (_dragging && _lastMouse != Vector3.zero)
-                {
-                    Vector3 delta = mouse - _lastMouse;
-                    DadsEPIPlugin.HudPosition.Value += new Vector2(delta.x, delta.y);
-                }
-            }
-            else _dragging = false;
-            _lastMouse = mouse;
-        }
-
-        private static void ClampToViewport()
-        {
-            if (_root == null || _root.parent == null) return;
-            _root.GetWorldCorners(Corners);
-            float minX = Mathf.Min(Corners[0].x, Corners[1].x);
-            float maxX = Mathf.Max(Corners[2].x, Corners[3].x);
-            float minY = Mathf.Min(Corners[0].y, Corners[3].y);
-            float maxY = Mathf.Max(Corners[1].y, Corners[2].y);
-            const float margin = 8f;
-            float shiftX = minX < margin ? margin - minX : maxX > Screen.width - margin ? Screen.width - margin - maxX : 0f;
-            float shiftY = minY < margin ? margin - minY : maxY > Screen.height - margin ? Screen.height - margin - maxY : 0f;
-            _root.position += new Vector3(shiftX, shiftY, 0f);
         }
     }
 }
