@@ -33,6 +33,14 @@ namespace DadsEPI
             "ArrowCharred", "ArrowBloodGold", "BoltBone", "BoltIron", "BoltBlackmetal",
             "BoltCarapace", "BoltCharred", "BoltBloodGold"
         };
+        private static readonly HashSet<string> TrinketPrefabs = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "TrinketBlackDamageHealth", "TrinketBlackStamina", "TrinketBloodGoldHealth",
+            "TrinketBloodGoldStamina", "TrinketBronzeHealth", "TrinketBronzeStamina",
+            "TrinketCarapaceEitr", "TrinketChitinSwim", "TrinketFlametalEitr",
+            "TrinketFlametalStaminaHealth", "TrinketIronHealth", "TrinketIronStamina",
+            "TrinketScaleStaminaDamage", "TrinketSilverDamage", "TrinketSilverResist"
+        };
 
         internal static int NormalRows => Mathf.Clamp(VanillaRows, BaseVanillaRows, MaximumVanillaRows) + Mathf.Clamp(DadsEPIPlugin.ExtraRows.Value, 0, 5);
         internal static int EquipmentSlotCount => _equipmentSlotCount;
@@ -55,6 +63,7 @@ namespace DadsEPI
             if (DadsEPIPlugin.WishboneSlot.Value) AddEquipment("Wishbone", "Wishbone", item => IsPrefab(item, "Wishbone"));
             if (DadsEPIPlugin.CryptKeySlot.Value) AddEquipment("Crypt Key", "Crypt Key", item => IsPrefab(item, "CryptKey"));
             if (DadsEPIPlugin.ArrowsSlot.Value) AddEquipment("Arrows", "Arrows", IsArrow);
+            if (DadsEPIPlugin.TrinketSlot.Value) AddEquipment("Trinket", "Trinket", item => TrinketPrefabs.Contains(PrefabName(item)));
             if (DadsEPIPlugin.ShieldSlot.Value) AddEquipment("Shield", "Shield", item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shield);
             if (DadsEPIPlugin.UtilitySlot.Value) AddEquipment("Utility", DadsEPIPlugin.UtilityLabel.Value, item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility &&
                 (!DadsEPIPlugin.WishboneSlot.Value || !IsPrefab(item, "Wishbone")) &&

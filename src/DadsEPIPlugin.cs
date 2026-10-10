@@ -13,7 +13,7 @@ namespace DadsEPI
     {
         public const string PluginGuid = "com.dadisbored.dadsepi";
         public const string PluginName = "DadsEPI";
-        public const string PluginVersion = "1.4.8";
+        public const string PluginVersion = "1.4.9";
 
         internal static ConfigEntry<bool> ModEnabled;
         internal static ConfigEntry<int> ExtraRows;
@@ -28,6 +28,7 @@ namespace DadsEPI
         internal static ConfigEntry<bool> WishboneSlot;
         internal static ConfigEntry<bool> CryptKeySlot;
         internal static ConfigEntry<bool> ArrowsSlot;
+        internal static ConfigEntry<bool> TrinketSlot;
         internal static ConfigEntry<bool> ShieldSlot;
         internal static ConfigEntry<bool> UtilitySlot;
         internal static ConfigEntry<string> RemovedEquipmentSlots;
@@ -69,6 +70,7 @@ namespace DadsEPI
             WishboneSlot = Config.Bind("4 - Special Equipment Slots", "Enable Wishbone Slot", true, "Add a Wishbone-only slot.");
             CryptKeySlot = Config.Bind("4 - Special Equipment Slots", "Enable Crypt Key Slot", true, "Add a Crypt Key-only slot.");
             ArrowsSlot = Config.Bind("4 - Special Equipment Slots", "Enable Arrows Slot", true, "Add an arrow and bolt ammunition slot.");
+            TrinketSlot = Config.Bind("4 - Special Equipment Slots", "Enable Trinket Slot", true, "Add a slot for the listed trinket prefabs.");
             ShieldSlot = Config.Bind("4 - Special Equipment Slots", "Enable Shield Slot", true, "Add a shield-only slot.");
             UtilitySlot = Config.Bind("4 - Special Equipment Slots", "Enable Utility Slot", true, "Add a utility-item slot.");
             RemovedEquipmentSlots = Config.Bind("4.5 - Equipment Slot Management", "Removed Equipment Slots", "", "Comma or semicolon separated slot names.");
@@ -109,6 +111,7 @@ namespace DadsEPI
             Watch(AlwaysShowQuickSlots, OnDisplaySettingChanged); Watch(QuickSlotsPerRow, OnDisplaySettingChanged);
             Watch(WisplightSlot, OnLayoutSettingChanged); Watch(WishboneSlot, OnLayoutSettingChanged);
             Watch(CryptKeySlot, OnLayoutSettingChanged); Watch(ArrowsSlot, OnLayoutSettingChanged);
+            Watch(TrinketSlot, OnLayoutSettingChanged);
             Watch(ShieldSlot, OnLayoutSettingChanged); Watch(UtilitySlot, OnLayoutSettingChanged);
             Watch(RemovedEquipmentSlots, OnLayoutSettingChanged);
             for (int index = 0; index < CustomSlotNames.Length; index++)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.9
+
+- Add a dedicated Trinket slot for the 15 listed trinket prefabs.
+
 ## 1.4.8
 
 - Align quick-slot centers and spacing with the main hotbar across UI scales.

@@ -5,7 +5,7 @@ DadsEPI is an independently implemented extended player inventory for Valheim 1.
 ## Features
 
 - Native Valheim inventory size by default, with zero-to-five optional ordinary rows.
-- A separate right-side equipment grid for Head, Chest, Legs, Back, Wisplight, Wishbone, Crypt Key, Arrows, Shield, and Utility.
+- A separate right-side equipment grid for Head, Chest, Legs, Back, Wisplight, Wishbone, Crypt Key, Arrows, Trinket, Shield, and Utility.
 - Zero-to-eight quick-use slots with individual hotkeys, HUD labels, scaling, row layout, and drag positioning.
 - Toggleable built-in special slots, including Utility.
 - Ten custom slots added through one name field, one comma-separated prefab field, and an Add Slot button in DadsBepInExModManager.
