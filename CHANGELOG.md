@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.10
+
+- Anchor quick slots to the first hotbar slot and keep them directly below the hotbar on every HUD update.
+- Disable quick-slot dragging and saved-position offsets.
+
 ## 1.4.9
 
 - Add a dedicated Trinket slot for the 15 listed trinket prefabs.

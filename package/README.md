@@ -6,7 +6,7 @@ DadsEPI is an independently implemented extended player inventory for Valheim 1.
 
 - Native Valheim inventory size by default, with zero-to-five optional ordinary rows.
 - A separate right-side equipment grid for Head, Chest, Legs, Back, Wisplight, Wishbone, Crypt Key, Arrows, Trinket, Shield, and Utility.
-- Zero-to-eight quick-use slots with individual hotkeys, HUD labels, scaling, row layout, and drag positioning.
+- Zero-to-eight quick-use slots with individual hotkeys, HUD labels, scaling, and row layout. The quick-slot HUD stays directly below the hotbar.
 - Toggleable built-in special slots, including Utility.
 - Ten custom slots added through one name field, one comma-separated prefab field, and an Add Slot button in DadsBepInExModManager.
 - Native Valheim character-inventory serialization.
@@ -31,6 +31,6 @@ Install through a Thunderstore-compatible mod manager. For manual installation, 
 
 DadsEPI is a client-side inventory owner. Do not run it alongside AzuExtendedPlayerInventory, EquipmentAndQuickSlots, or another mod that changes player inventory dimensions or owns equipment slots.
 
-Version 1.4.8 targets Valheim 1.0.12 and BepInEx 5.4.2350. Back up the character before changing inventory-owner mods.
+Version 1.4.10 targets Valheim 1.0.12 and BepInEx 5.4.2350. Back up the character before changing inventory-owner mods.
 
 Source: [GitHub](https://github.com/DadxIsxBored/DadsEPI)
