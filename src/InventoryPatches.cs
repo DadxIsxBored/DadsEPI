@@ -256,7 +256,7 @@ namespace DadsEPI
             Vector2i equipmentPosition = __state.TargetEquipment ? pos : __state.SourceEquipment ? __state.Source : new Vector2i(-1, -1);
             if (equipmentPosition.x < 0) return;
             ItemDrop.ItemData equippedItem = inventory.GetItemAt(equipmentPosition.x, equipmentPosition.y);
-            if (equippedItem != null && !equippedItem.m_equipped && equippedItem.IsEquipable() &&
+            if (InventoryLayout.ShouldAutoEquip(equippedItem) &&
                 InventoryLayout.CanPlace(equippedItem, equipmentPosition, inventory.GetWidth()))
                 Player.m_localPlayer.EquipItem(equippedItem);
         }

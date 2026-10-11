@@ -337,7 +337,7 @@ namespace DadsEPI
             ItemDrop.ItemData occupant = inventory.GetItemAt(destination.x, destination.y);
             if (occupant != null)
             {
-                if (ReferenceEquals(occupant, item) && occupant.IsEquipable() && !occupant.m_equipped)
+                if (ReferenceEquals(occupant, item) && ShouldAutoEquip(occupant))
                     player.EquipItem(occupant);
                 return;
             }
@@ -346,7 +346,13 @@ namespace DadsEPI
                 : inventory.GetAllItems().FirstOrDefault(candidate => Slots[slot].Accepts(candidate) && string.Equals(PrefabName(candidate), PrefabName(item), StringComparison.Ordinal));
             if (storedItem == null) return;
             MoveItem(player, inventory, storedItem, destination);
-            if (storedItem.IsEquipable() && !storedItem.m_equipped) player.EquipItem(storedItem);
+            if (ShouldAutoEquip(storedItem)) player.EquipItem(storedItem);
+        }
+
+        internal static bool ShouldAutoEquip(ItemDrop.ItemData item)
+        {
+            return item?.m_shared != null && item.m_shared.m_itemType != ItemDrop.ItemData.ItemType.Shield &&
+                   item.IsEquipable() && !item.m_equipped;
         }
 
         internal static void AutoEquipDedicatedItems(Player player)
@@ -359,7 +365,7 @@ namespace DadsEPI
             {
                 Vector2i position = SlotPosition(slot, inventory.GetWidth());
                 ItemDrop.ItemData item = inventory.GetItemAt(position.x, position.y);
-                if (item != null && Slots[slot].Accepts(item) && item.IsEquipable() && !item.m_equipped) player.EquipItem(item);
+                if (item != null && Slots[slot].Accepts(item) && ShouldAutoEquip(item)) player.EquipItem(item);
             }
         }
 
@@ -408,7 +414,7 @@ namespace DadsEPI
                     {
                         Vector2i position = SlotPosition(slot, inventory.GetWidth());
                         ItemDrop.ItemData item = inventory.GetItemAt(position.x, position.y);
-                        if (item != null && Slots[slot].Accepts(item) && item.IsEquipable() && !item.m_equipped) player.EquipItem(item);
+                        if (item != null && Slots[slot].Accepts(item) && ShouldAutoEquip(item)) player.EquipItem(item);
                     }
                 }
             }

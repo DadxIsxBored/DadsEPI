@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.12
+
+- Keep shields in the dedicated slot without automatically equipping them during login, inventory normalization, pickup, crafting, or slot placement. Manual shield equip and saved equipped state still work.
+
 ## 1.4.11
 
 - Apply mod-manager slot edits as one final layout change when the manager closes.
